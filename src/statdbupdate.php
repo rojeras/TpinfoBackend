@@ -19,23 +19,24 @@ ini_set('memory_limit', '1024M');
 //require $_SERVER['DOCUMENT_ROOT'].'/scripts/leolib_sql.php';
 require 'leolib_sql.php';
 require 'leolib.php'; // +++++
+
 /* TARGET::NOGUI */ $iniFile = "/home/leoroj/ini/statdbupdate52.ini";
 /* TARGET::AWS */ $iniFile = "../lib/statdbupdate52.ini";
 /* TARGET::LOCAL AWS */ $iniFile = "../lib/statdbupdate52.ini";
-
+/*
 $ini_array = parse_ini_file($iniFile, true);
 
 $dbEnvironment = '[[DATABASE]]'; // Will be substituted by build.py
-
+*/
 /* TARGET::REMOVE_DURING_BUILD */ $dbEnvironment = 'DB-LOCAL';
-
+/*
 $ini_values = $ini_array[$dbEnvironment];
 
 $INI_dbserver = $ini_values['dbserver'];
 $INI_dbuser = $ini_values['dbuserrw'];
 $INI_dbpassword = $ini_values['dbpasswordrw'];
 $INI_dbname = $ini_values['dbname'];
-
+*/
 
 // $BASEURL = 'http://hippokrates.se/scripts/takapi.php/api/v1/';
 
@@ -59,8 +60,16 @@ define('SYNONYMFILE', $SYNONYMFILE);
 error_reporting(E_ALL);
 
 // Get a connection to the DB
-$DBCONN = sqlConnect($INI_dbserver, $INI_dbuser, $INI_dbpassword, $INI_dbname);
+//$DBCONN = sqlConnect($INI_dbserver, $INI_dbuser, $INI_dbpassword, $INI_dbname);
 
+$dbserver   = getenv('DBSERVER');
+$dbuser     = getenv('DBUSER');
+$dbpassword = getenv('DBPWD');
+$dbname     = getenv('DBNAME');
+
+//echo 'Connect info: ' . $INI_dbserver . ' ' . $INI_dbname . ' ' . $INI_dbuser . ' ' . $INI_dbpassword . "\n";
+
+$DBCONN = sqlConnect($dbserver, $dbuser, $dbpassword, $dbname);
 echo "DB: " . $INI_dbserver . "\n";
 
 /*

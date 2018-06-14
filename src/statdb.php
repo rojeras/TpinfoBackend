@@ -27,39 +27,23 @@
 error_reporting(E_ALL);
 
 require 'leolib_sql.php';
-require 'leolib_debug.php';
 
 $serverName = $_SERVER['SERVER_NAME'];
 
-/* TARGET::NOGUI */ $iniFile = "/home/leoroj/ini/statdb52.ini";
-/* TARGET::AWS */ $iniFile = "../lib/statdb52.ini";
-/* TARGET::LOCAL */ $iniFile = "../lib/statdb52.ini";
+$dbserver   = getenv('DBSERVER');
+$dbuser     = getenv('DBUSER');
+$dbpassword = getenv('DBPWD');
+$dbname     = getenv('DBNAME');
 
-$ini_array = parse_ini_file($iniFile, true);
+//echo 'Connect info: ' . $INI_dbserver . ' ' . $INI_dbname . ' ' . $INI_dbuser . ' ' . $INI_dbpassword . "\n";
 
-$environment = '[[DATABASE]]'; // Will be substituted by build.py
-/* TARGET::REMOVE_DURING_BUILD */ $environment = 'DB-LOCAL';
-
-// !!! TEMPTEMPTEMP
-/// $environment = 'DB-AWS';
-// TEMPTEMPTEMP
-
-$ini_values = $ini_array[$environment];
-
-$INI_dbserver = $ini_values['dbserver'];
-$INI_dbuser = $ini_values['dbuserro'];
-$INI_dbpassword = $ini_values['dbpasswordro'];
-$INI_dbname = $ini_values['dbname'];
+$DBCONN = sqlConnect($dbserver, $dbuser, $dbpassword, $dbname);
 
 header('Access-Control-Allow-Origin: *');
-//header('Access-Control-Allow-Methods: GET');
+$scriptName = basename(__FILE__, 'statdb.php');
 
-$DBCONN = sqlConnect($INI_dbserver, $INI_dbuser, $INI_dbpassword, $INI_dbname);
-
-$command = "";
-$scriptName = basename(__FILE__, 'takapidb.php');
-
-$uriPrefix = '/newversion/statdb/statdb.php/api/v1/';
+$uriPrefix = '/statdb.php/api/v1/';
+//$uriPrefix = '/newversion/statdb/statdb.php/api/v1/';
 $requestURI = $_SERVER['REQUEST_URI'];
 
 if (isset($_SERVER['QUERY_STRING'])) {
