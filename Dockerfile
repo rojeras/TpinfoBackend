@@ -1,5 +1,5 @@
 FROM php:7.2-apache
-
+# LEO added comment to verify git functionality - can be removed
 LABEL maintainer="SLL-IT suupport@sll.se"
 
 #ENV VIRTUAL_HOST=tpinfo.se
