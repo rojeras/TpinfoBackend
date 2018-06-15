@@ -19,32 +19,19 @@
  * the takapicache file. If the takapi has been updated all api calls are executed and new cache files are created.
  */
 
-
-// todo: Use prep stmts. Check if those can be saved between calls
-
 //error_reporting(E_ALL ^ E_WARNING);
 //error_reporting(E_ALL ^ E_NOTICE);
 error_reporting(E_ALL);
 
 require 'leolib_sql.php';
+require_once 'leolib.php';
 
 $serverName = $_SERVER['SERVER_NAME'];
 
-$dbserver   = getenv('DBSERVER');
-$dbuser     = getenv('DBUSER');
-$dbpassword = getenv('DBPWD');
-$dbname     = getenv('DBNAME');
-
-//echo 'Connect info: ' . $INI_dbserver . ' ' . $INI_dbname . ' ' . $INI_dbuser . ' ' . $INI_dbpassword . "\n";
-
-$DBCONN = sqlConnect($dbserver, $dbuser, $dbpassword, $dbname);
+$DBCONN = sqlConnectEnvs();
 
 header('Access-Control-Allow-Origin: *');
-$scriptName = basename(__FILE__, 'statdb.php');
-
-$uriPrefix = '/statdb.php/api/v1/';
-//$uriPrefix = '/newversion/statdb/statdb.php/api/v1/';
-$requestURI = $_SERVER['REQUEST_URI'];
+$scriptName = basename(__FILE__, 'tpdbapi.php');
 
 if (isset($_SERVER['QUERY_STRING'])) {
     $queryString = $_SERVER['QUERY_STRING'];
@@ -52,16 +39,13 @@ if (isset($_SERVER['QUERY_STRING'])) {
     $queryString = '';
 }
 
-$docRoot = $_SERVER['DOCUMENT_ROOT'];
-
-$TYPE = str_replace($uriPrefix, "", $requestURI);
+$requestURI = $_SERVER['REQUEST_URI'];
+$TYPE = substr(strrchr( $requestURI, '/'), 1);
 $TYPE = str_replace('?' . $queryString, "", $TYPE);
 define('TYPE', $TYPE);
 
 // Parse the input params
 parse_str($queryString, $queryArr);
-
-//$includeParam = $queryArr['include'];
 
 // Definitions of the API
 switch ($TYPE) {
