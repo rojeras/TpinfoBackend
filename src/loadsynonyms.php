@@ -6,89 +6,33 @@ ini_set('memory_limit', '1024M');
  * Date: 2018-01-29
  */
 
-/*
- SQL to extract info about serviceComponents and their synonyms (if any)
-
-SELECT
-  'serviceComponent',
-  sc.value,
-  ms.synonym,
-  sc.description
-FROM
-  TakServiceComponent sc LEFT JOIN MetaSynonym ms
-    ON ms.originalIdentifier = sc.value;
------------------------------------------
-SELECT DISTINCT
-  'serviceComponent',
-  comp.value,
-  comp.description
-FROM
-  TakServiceComponent comp,
-  TakIntegration integ,
-  StatData stat
-WHERE
-  stat.integrationId = integ.id
-  AND
-  (integ.consumerId = comp.id
-    OR integ.producerid = comp.id)
-ORDER BY
-  comp.description
-;
-
- */
-require 'leolib_sql.php';
-
-/* TARGET::NOGUI */ $iniFile = "/home/leoroj/ini/statdbupdate.ini";
-/* TARGET::AWS */ $iniFile = "../lib/statdbupdate.ini";
-/* TARGET::LOCAL AWS */ $iniFile = "../lib/statdbupdate.ini";
-
-$ini_array = parse_ini_file($iniFile, true);
-
-$dbEnvironment = '[[DATABASE]]'; // Will be substituted by build.py
-
-/* TARGET::REMOVE_DURING_BUILD */ $dbEnvironment = 'DB-LOCAL';
-
-$ini_values = $ini_array[$dbEnvironment];
-
-$INI_dbserver = $ini_values['dbserver'];
-$INI_dbuser = $ini_values['dbuserrw'];
-$INI_dbpassword = $ini_values['dbpasswordrw'];
-$INI_dbname = $ini_values['dbname'];
-
-$STATAPIROOT = '../statapicache/';
-echo "STATAPIROOT: " . $STATAPIROOT . "\n";
-define('STATAPIROOT', $STATAPIROOT);
-
-$SYNONYMFILE = 'MetaSynonym.csv';
-define('SYNONYMFILE', $SYNONYMFILE);
-
 // Report all errors
 error_reporting(E_ALL);
 
-// Get a connection to the DB
-$DBCONN = sqlConnect($INI_dbserver, $INI_dbuser, $INI_dbpassword, $INI_dbname);
+require 'leolib_sql.php';
 
-echo "DB: " . $INI_dbserver . "\n";
+$synonymFile = leoGetenv('SYNONYMFILE');
+
+// Get a connection to the DB
+$DBCONN = sqlConnectEnvs();
 
 echo "Start! \n";
 
 echo("Load synonyms\n");
-loadSynonyms();
+loadSynonyms($synonymFile);
 
 echo 'Klart!';
 echo '';
 
 // End of main program
 
-function loadSynonyms()
+function loadSynonyms($synonymFile)
 {
-    GLOBAL $STATAPIROOT;
     GLOBAL $DBCONN;
-    GLOBAL $SYNONYMFILE;
 
     $DBCONN->begin_transaction();
 
-    $file = $STATAPIROOT . $SYNONYMFILE;
+    $file = $synonymFile;
 
     $csvData = csv_to_array($file);
 
@@ -183,7 +127,7 @@ function csv_to_array($filename='')
         fclose($handle);
     }
 
-    var_dump($data);
+    //var_dump($data);
     return $data;
 }
 

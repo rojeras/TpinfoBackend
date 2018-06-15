@@ -8,6 +8,17 @@
 // todo: Use connection pool (p:host)
 // todo: Put authentication data in a separate ini file
 
+require_once 'leolib.php';
+
+function sqlConnectEnvs() {
+    $dbserver   = 'p:' . leoGetenv('DBSERVER'); // The "p:" adds a persistent connection
+    $dbuser     = leoGetenv('DBUSER');
+    $dbpassword = leoGetenv('DBPWD');
+    $dbname     = leoGetenv('DBNAME');
+
+    return sqlConnect($dbserver, $dbuser, $dbpassword, $dbname);
+}
+
 function sqlConnect($servername, $username, $password, $dbname)
 {
     // Create connection

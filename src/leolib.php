@@ -42,4 +42,13 @@ function callTakApi($url)
 
     return $result;
 }
+
+function leoGetenv($envVar) {
+    $envValue = getenv($envVar);
+
+    if (! $envValue) {
+        echo "** WARNING mandatory environment variable is not set: " . $envVar . "\n";
+    }
+    return $envValue;
+}
 ?>

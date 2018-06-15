@@ -7,75 +7,30 @@ ini_set('memory_limit', '1024M');
  * Time: 10:54 AM
  */
 
+// Report all errors
+error_reporting(E_ALL);
 // done: Add transactions and commit/rollback for each TAK per day
 
 // todo: Create a mechanism where the program notifies if it encounters problems (mail?)
-// todo: Set error logging to a file
-// todo: Maybe set update log to a file too (or a db table)
 
-// This pgm update the takapi cache of today
+// This pgm update the tpdb cf today
 // Intended to be run by cron
 
 //require $_SERVER['DOCUMENT_ROOT'].'/scripts/leolib_sql.php';
 require 'leolib_sql.php';
-require 'leolib.php'; // +++++
+require_once 'leolib.php';
 
-/* TARGET::NOGUI */ $iniFile = "/home/leoroj/ini/statdbupdate52.ini";
-/* TARGET::AWS */ $iniFile = "../lib/statdbupdate52.ini";
-/* TARGET::LOCAL AWS */ $iniFile = "../lib/statdbupdate52.ini";
-/*
-$ini_array = parse_ini_file($iniFile, true);
+$TAKAPI_URL = 'http://api.ntjp.se/coop/api/v1/';
 
-$dbEnvironment = '[[DATABASE]]'; // Will be substituted by build.py
-*/
-/* TARGET::REMOVE_DURING_BUILD */ $dbEnvironment = 'DB-LOCAL';
-/*
-$ini_values = $ini_array[$dbEnvironment];
+$STATFILESPATH = leoGetenv('STATFILESPATH');
 
-$INI_dbserver = $ini_values['dbserver'];
-$INI_dbuser = $ini_values['dbuserrw'];
-$INI_dbpassword = $ini_values['dbpasswordrw'];
-$INI_dbname = $ini_values['dbname'];
-*/
-
-// $BASEURL = 'http://hippokrates.se/scripts/takapi.php/api/v1/';
-
-//$BASEURL = 'http://test.api.ntjp.se/coop/api/v1/';
-/* TARGET::REMOVE_DURING_BUILD */ //$BASEURL = 'http://localhost:4444/takrepo/takapi.php/api/v1/'; // Read local copy of the files !!!!
-$BASEURL = 'http://api.ntjp.se/coop/api/v1/'; // !!!! todo: Tag bort "qa."
-
-// Path to statistics files
-//$docRoot = $_SERVER['DOCUMENT_ROOT'];
-//$STATAPIROOT = $docRoot . '/statapicache/';
-
-$STATAPIROOT = '../statapicache/';
-echo "STATAPIROOT: " . $STATAPIROOT . "\n";
-define('STATAPIROOT', $STATAPIROOT);
+echo "STATAPIROOT: " . $STATFILESPATH . "\n";
 
 $SYNONYMFILE = 'MetaSynonym.csv';
 define('SYNONYMFILE', $SYNONYMFILE);
 
-
-// Report all errors
-error_reporting(E_ALL);
-
 // Get a connection to the DB
-//$DBCONN = sqlConnect($INI_dbserver, $INI_dbuser, $INI_dbpassword, $INI_dbname);
-
-$dbserver   = getenv('DBSERVER');
-$dbuser     = getenv('DBUSER');
-$dbpassword = getenv('DBPWD');
-$dbname     = getenv('DBNAME');
-
-//echo 'Connect info: ' . $INI_dbserver . ' ' . $INI_dbname . ' ' . $INI_dbuser . ' ' . $INI_dbpassword . "\n";
-
-$DBCONN = sqlConnect($dbserver, $dbuser, $dbpassword, $dbname);
-echo "DB: " . $INI_dbserver . "\n";
-
-/*
-var_dump(extractDomainContractName("urn:riv:crm:carelisting:CreateListingResponder:1"));
-die('Done');
-*/
+$DBCONN = sqlConnectEnvs();
 
 echo "Start! \n";
 
@@ -83,14 +38,13 @@ echo("Load TAK data\n");
 // emptyDatabase("ALL"); !!!
 loadTakData();
 
-//echo("DO NOT Load statistics\n");
 // emptyDatabase("StatData");
-loadStatisticsSll();  //!!!!
+loadStatistics($STATFILESPATH);  //!!!!
 
 echo 'Klart!';
 echo '';
 
-// End of main program
+return; // End of main program
 
 
 function loadTakData()
@@ -173,17 +127,17 @@ function loadTakData()
 }
 
 // todo: Add a similar function to read Ineras CSV files
-function loadStatisticsSll()
+function loadStatistics($statFiles)
 {
-// todo: Behöver addera logik för att säkra att svarstider läggs på om det finns i indatafilen fär redan existerande stat-records
-    GLOBAL $STATAPIROOT;
+    echo "Will load statistics from path: " . $statFiles . "\n";
+
     GLOBAL $DBCONN;
 
     $DBCONN->begin_transaction();
 
     //foreach (glob($STATAPIROOT . "*.NEW.json") as $file) {
     //foreach (glob($STATAPIROOT . "*.STAT.json") as $file) {
-    foreach (glob($STATAPIROOT . "*.*.json") as $file) {
+    foreach (glob($statFiles . "/*.*.json") as $file) {
 
         $fileData = file_get_contents($file);
         $fileArr = json_decode($fileData, true);
@@ -1190,8 +1144,8 @@ function emptyDatabase($scope)
 
 function getConnectionPoints()
 {
-    global $BASEURL;
-    $cmdUrl = $BASEURL . 'connectionPoints';
+    global $TAKAPI_URL;
+    $cmdUrl = $TAKAPI_URL . 'connectionPoints';
     //return json_decode(file_get_contents($cmdUrl), true); // +++++
     return json_decode(callTakApi($cmdUrl), true);
 }
@@ -1227,8 +1181,8 @@ function getServiceContracts($connectionPointId)
 */
 function getCooperations($connectionPointId)
 {
-    global $BASEURL;
-    $cmdUrl = $BASEURL . 'cooperations?connectionPointId=' . $connectionPointId . '&include=serviceConsumer,serviceContract,logicalAddress';
+    global $TAKAPI_URL;
+    $cmdUrl = $TAKAPI_URL . 'cooperations?connectionPointId=' . $connectionPointId . '&include=serviceConsumer,serviceContract,logicalAddress';
 
     //return json_decode(file_get_contents($cmdUrl), true);
     // $content = file_get_contents($cmdUrl); // +++++
@@ -1243,8 +1197,8 @@ function getCooperations($connectionPointId)
 
 function getProductions($connectionPointId)
 {
-    global $BASEURL;
-    $cmdUrl = $BASEURL . 'serviceProductions?connectionPointId=' . $connectionPointId . '&include=serviceContract,logicalAddress,serviceProducer,physicalAddress';
+    global $TAKAPI_URL;
+    $cmdUrl = $TAKAPI_URL . 'serviceProductions?connectionPointId=' . $connectionPointId . '&include=serviceContract,logicalAddress,serviceProducer,physicalAddress';
     //return json_decode(file_get_contents($cmdUrl), true);
 
     // $content = file_get_contents($cmdUrl); // +++++
