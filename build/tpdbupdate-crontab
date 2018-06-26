@@ -1,0 +1,4 @@
+30 5 * * * cd /var/www/html/skoview/statdb/ && php70 statdbupdate.php > /home/leoroj/logs/$(date --iso-8601)_statdbupdate.log
+* * * * * echo "Hej hopp" >> /var/log/cron.log 2>&1
+
+
