@@ -16,6 +16,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 ini_set('memory_limit', '1024M');
+ini_set('max_execution_time', 2000);
 
 // Report all errors
 error_reporting(E_ALL);

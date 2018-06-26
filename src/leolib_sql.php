@@ -16,9 +16,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-// todo: Use connection pool (p:host)
-// todo: Put authentication data in a separate ini file
-
 require_once 'leolib.php';
 
 function sqlConnectEnvs() {
