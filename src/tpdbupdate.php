@@ -21,7 +21,7 @@ ini_set('max_execution_time', 2000);
 // Report all errors
 error_reporting(E_ALL);
 // done: Add transactions and commit/rollback for each TAK per day
-
+// A small change to trigger a rebuild
 // todo: Create a mechanism where the program notifies if it encounters problems (mail?)
 
 // This pgm update the tpdb cf today
