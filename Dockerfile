@@ -1,5 +1,6 @@
 FROM php:7.2-apache
-
+#Added this comment to trigger autobuild of image on docker hub.
+# LEO added comment to verify git functionality - can be removed
 LABEL maintainer="SLL-IT suupport@sll.se"
 
 #ENV VIRTUAL_HOST=tpinfo.se
@@ -19,5 +20,4 @@ EXPOSE 80 443
 
 COPY src/* /var/www/html/tpdb/
 
-
-
+#ADD apache-config.conf /etc/apache2/sites-enabled/000-default.conf
