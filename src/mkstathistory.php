@@ -118,7 +118,7 @@ function createHistoryFile($path, $month) {
 
     $result = sqlSelectPrep($sql, "s", array($month));
 
-    $wfile = fopen($file, "w") or die("Unable to open file: " . $file);
+    $wfile = fopen($file, "w") or die("Unable to open file: " . $file . "\n");
 
     while ($row = $result->fetch_assoc()) {
         fwrite($wfile, $row['Date'] . ';');
