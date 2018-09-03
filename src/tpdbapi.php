@@ -17,6 +17,7 @@
  */
 //error_reporting(E_ALL ^ E_WARNING);
 //error_reporting(E_ALL ^ E_NOTICE);
+// A small edit to trigger rebuild
 error_reporting(E_ALL);
 
 require 'leolib_sql.php';
