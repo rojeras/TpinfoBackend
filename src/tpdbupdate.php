@@ -433,7 +433,7 @@ function ensureRouting($plattformId, $timeStamp, $itemList, $lastSnapshotTimeInD
         }
         // And verify/update/insert in Routing and Url tables
         if ($routingId) {
-            ensureUrl($routingId, $url, $timeStamp, $lastSnapshotTimeInDb);
+            //ensureUrl($routingId, $url, $timeStamp, $lastSnapshotTimeInDb);
             ensureRivtaProfile($routingId, $rivtaProfile, $timeStamp, $lastSnapshotTimeInDb);
         }
     }
@@ -718,33 +718,10 @@ function ensureServiceDomain($domainName)
 
     return $id;
 }
-
+/*
 function ensureUrl($routingId, $url, $timeStamp, $lastSnapshotTimeInDb)
 {
-    /*
-    $select = "
-        SELECT id
-        FROM TakUrl
-        WHERE
-          routingId = ?
-          AND url = ?
-          AND dateEnd = ? 
-    ";
-    $result = sqlSelectPrep($select, "iss", array($routingId, $url, $lastSnapshotTimeInDb));
-    $numRows = $result->num_rows;
 
-    if ($numRows >= 1) {
-        // Record exist, update dateEnd
-        $row = $result->fetch_assoc();
-        $urlId = $row['id'];
-
-        $update = "
-            UPDATE TakUrl
-            SET dateEnd = ?
-            WHERE id = ?
-        ";
-        $dummy = sqlUpdatePrep($update, "si", array($timeStamp, $urlId));
-     */
 
     $update = "
             UPDATE TakUrl
@@ -766,7 +743,7 @@ function ensureUrl($routingId, $url, $timeStamp, $lastSnapshotTimeInDb)
         $dummy = sqlInsertPrep($insert, "isss", array($routingId, $url, $timeStamp, $timeStamp));
     }
 }
-
+*/
 function ensureRivtaProfile($routingId, $rivtaProfile, $timeStamp, $lastSnapshotTimeInDb)
 {
     /*
@@ -1098,12 +1075,12 @@ function emptyDatabase($scope)
         $i++;
         $sql[$i] = "ALTER TABLE TakIntegration AUTO_INCREMENT = 1";
         $i++;
-
+/*
         $sql[$i] = "DELETE FROM TakUrl WHERE id <> 0";
         $i++;
         $sql[$i] = "ALTER TABLE TakUrl AUTO_INCREMENT = 1";
         $i++;
-
+*/
         $sql[$i] = "DELETE FROM TakRivtaProfile WHERE id <> 0";
         $i++;
         $sql[$i] = "ALTER TABLE TakRivtaProfile AUTO_INCREMENT = 1";
