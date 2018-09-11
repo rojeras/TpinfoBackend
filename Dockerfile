@@ -19,6 +19,7 @@ RUN docker-php-ext-install mysqli
 EXPOSE 80 443
 
 COPY src/* /var/www/html/tpdb/
-RUN mkdir -p /var/www/html/tpdb/history
+#RUN mkdir -p /var/www/html/tpdb/history
+RUN mkdir -p /var/www/html/tpdb/history && chown www-data:www-data /var/www/html/tpdb/history
 
 #ADD apache-config.conf /etc/apache2/sites-enabled/000-default.conf
