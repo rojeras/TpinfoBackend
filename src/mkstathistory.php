@@ -62,11 +62,13 @@ function mkStatHistory($path)
         createHistoryFile($path, $month);
     }
 
+    return;
+
 }
 
 function createHistoryFile($path, $month) {
     $file = $path . "/RTP-PROD_statistik_" . $month . ".csv";
-    echo $file . "\n";
+    echo  date(DATE_ATOM) . " " . $file;
     //unlink($file);
 
     $sql = "
@@ -120,8 +122,12 @@ function createHistoryFile($path, $month) {
 
     $wfile = fopen($file, "w") or die("Unable to open file: " . $file . "\n");
 
+    $maxDate = '1900-01-01';
+
     while ($row = $result->fetch_assoc()) {
-        fwrite($wfile, $row['Date'] . ';');
+        $thisDate = $row['Date'];
+
+        fwrite($wfile, $thisDate . ';');
         fwrite($wfile, $row['ConsumerHSA'] . ';');
         fwrite($wfile, $row['ConsumerDescription'] . ';');
         fwrite($wfile, $row['Domain'] . ';');
@@ -132,8 +138,16 @@ function createHistoryFile($path, $month) {
         fwrite($wfile, $row['ProducerDescription'] . ';');
         fwrite($wfile, $row['Calls']);
         fwrite($wfile, "\n");
+
+        if ($thisDate !== "Date" && $thisDate > $maxDate) {
+            $maxDate = $thisDate;
+        }
+
     }
 
+    echo " Max date = " . $maxDate . "\n";
+
+    return;
 }
 
 ?>

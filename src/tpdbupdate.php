@@ -1186,7 +1186,9 @@ function getCooperations($connectionPointId)
 function getProductions($connectionPointId)
 {
     global $TAKAPI_URL;
-    $cmdUrl = $TAKAPI_URL . 'serviceProductions?connectionPointId=' . $connectionPointId . '&include=serviceContract,logicalAddress,serviceProducer,physicalAddress';
+    //$cmdUrl = $TAKAPI_URL . 'serviceProductions?connectionPointId=' . $connectionPointId . '&include=serviceContract,logicalAddress,serviceProducer,physicalAddress';
+    // Do not download full URLs anymore. Security reasons.
+    $cmdUrl = $TAKAPI_URL . 'serviceProductions?connectionPointId=' . $connectionPointId . '&include=serviceContract,logicalAddress,serviceProducer';
     //return json_decode(file_get_contents($cmdUrl), true);
 
     // $content = file_get_contents($cmdUrl); // +++++
