@@ -17,7 +17,7 @@
  */
 //error_reporting(E_ALL ^ E_WARNING);
 //error_reporting(E_ALL ^ E_NOTICE);
-// A small edit to trigger rebuild
+// A small edit to trigger rebuild again
 error_reporting(E_ALL);
 
 require 'leolib_sql.php';
@@ -33,7 +33,7 @@ $scriptName = basename(__FILE__, 'tpdbapi.php');
 if (isset($_SERVER['QUERY_STRING'])) {
     $queryString = $_SERVER['QUERY_STRING'];
 } else {
-    $queryString = '';
+    $queryString  =  '';
 }
 
 $requestURI = $_SERVER['REQUEST_URI'];
