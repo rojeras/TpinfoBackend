@@ -1,94 +1,49 @@
 <?php
-ini_set('memory_limit', '1024M');
 /**
- * Created by PhpStorm.
- * User: leo
- * Date: 2018-01-29
+    Copyright (C) 2013-2018 Lars Erik Röjerås
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-
-/*
- SQL to extract info about serviceComponents and their synonyms (if any)
-
-SELECT
-  'serviceComponent',
-  sc.value,
-  ms.synonym,
-  sc.description
-FROM
-  TakServiceComponent sc LEFT JOIN MetaSynonym ms
-    ON ms.originalIdentifier = sc.value;
------------------------------------------
-SELECT DISTINCT
-  'serviceComponent',
-  comp.value,
-  comp.description
-FROM
-  TakServiceComponent comp,
-  TakIntegration integ,
-  StatData stat
-WHERE
-  stat.integrationId = integ.id
-  AND
-  (integ.consumerId = comp.id
-    OR integ.producerid = comp.id)
-ORDER BY
-  comp.description
-;
-
- */
-require 'leolib_sql.php';
-
-/* TARGET::NOGUI */ $iniFile = "/home/leoroj/ini/statdbupdate.ini";
-/* TARGET::AWS */ $iniFile = "../lib/statdbupdate.ini";
-/* TARGET::LOCAL AWS */ $iniFile = "../lib/statdbupdate.ini";
-
-$ini_array = parse_ini_file($iniFile, true);
-
-$dbEnvironment = '[[DATABASE]]'; // Will be substituted by build.py
-
-/* TARGET::REMOVE_DURING_BUILD */ $dbEnvironment = 'DB-LOCAL';
-
-$ini_values = $ini_array[$dbEnvironment];
-
-$INI_dbserver = $ini_values['dbserver'];
-$INI_dbuser = $ini_values['dbuserrw'];
-$INI_dbpassword = $ini_values['dbpasswordrw'];
-$INI_dbname = $ini_values['dbname'];
-
-$STATAPIROOT = '../statapicache/';
-echo "STATAPIROOT: " . $STATAPIROOT . "\n";
-define('STATAPIROOT', $STATAPIROOT);
-
-$SYNONYMFILE = 'MetaSynonym.csv';
-define('SYNONYMFILE', $SYNONYMFILE);
+ini_set('memory_limit', '1024M');
 
 // Report all errors
 error_reporting(E_ALL);
 
-// Get a connection to the DB
-$DBCONN = sqlConnect($INI_dbserver, $INI_dbuser, $INI_dbpassword, $INI_dbname);
+require 'leolib_sql.php';
 
-echo "DB: " . $INI_dbserver . "\n";
+$synonymFile = leoGetenv('SYNONYMFILE');
+
+// Get a connection to the DB
+$DBCONN = sqlConnectEnvs();
 
 echo "Start! \n";
 
 echo("Load synonyms\n");
-loadSynonyms();
+loadSynonyms($synonymFile);
 
 echo 'Klart!';
 echo '';
 
 // End of main program
 
-function loadSynonyms()
+function loadSynonyms($synonymFile)
 {
-    GLOBAL $STATAPIROOT;
     GLOBAL $DBCONN;
-    GLOBAL $SYNONYMFILE;
 
     $DBCONN->begin_transaction();
 
-    $file = $STATAPIROOT . $SYNONYMFILE;
+    $file = $synonymFile;
 
     $csvData = csv_to_array($file);
 
@@ -183,7 +138,7 @@ function csv_to_array($filename='')
         fclose($handle);
     }
 
-    var_dump($data);
+    //var_dump($data);
     return $data;
 }
 

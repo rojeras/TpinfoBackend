@@ -1,72 +1,47 @@
 <?php
-ini_set('memory_limit', '1024M');
 /**
- * Created by PhpStorm.
- * User: leo
- * Date: 3/14/16
- * Time: 10:54 AM
+    Copyright (C) 2013-2018 Lars Erik Röjerås
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+ini_set('memory_limit', '1024M');
+ini_set('max_execution_time', 2000);
 
+// Report all errors
+error_reporting(E_ALL);
 // done: Add transactions and commit/rollback for each TAK per day
-
+// A small change to trigger a rebuild
 // todo: Create a mechanism where the program notifies if it encounters problems (mail?)
-// todo: Set error logging to a file
-// todo: Maybe set update log to a file too (or a db table)
 
-// This pgm update the takapi cache of today
+// This pgm update the tpdb cf today
 // Intended to be run by cron
 
 //require $_SERVER['DOCUMENT_ROOT'].'/scripts/leolib_sql.php';
 require 'leolib_sql.php';
-require 'leolib.php'; // +++++
-/* TARGET::NOGUI */ $iniFile = "/home/leoroj/ini/statdbupdate52.ini";
-/* TARGET::AWS */ $iniFile = "../lib/statdbupdate52.ini";
-/* TARGET::LOCAL AWS */ $iniFile = "../lib/statdbupdate52.ini";
+require_once 'leolib.php';
 
-$ini_array = parse_ini_file($iniFile, true);
+$TAKAPI_URL = 'http://api.ntjp.se/coop/api/v1/';
 
-$dbEnvironment = '[[DATABASE]]'; // Will be substituted by build.py
+$STATFILESPATH = leoGetenv('STATFILESPATH');
 
-/* TARGET::REMOVE_DURING_BUILD */ $dbEnvironment = 'DB-LOCAL';
-
-$ini_values = $ini_array[$dbEnvironment];
-
-$INI_dbserver = $ini_values['dbserver'];
-$INI_dbuser = $ini_values['dbuserrw'];
-$INI_dbpassword = $ini_values['dbpasswordrw'];
-$INI_dbname = $ini_values['dbname'];
-
-
-// $BASEURL = 'http://hippokrates.se/scripts/takapi.php/api/v1/';
-
-//$BASEURL = 'http://test.api.ntjp.se/coop/api/v1/';
-/* TARGET::REMOVE_DURING_BUILD */ //$BASEURL = 'http://localhost:4444/takrepo/takapi.php/api/v1/'; // Read local copy of the files !!!!
-$BASEURL = 'http://api.ntjp.se/coop/api/v1/'; // !!!! todo: Tag bort "qa."
-
-// Path to statistics files
-//$docRoot = $_SERVER['DOCUMENT_ROOT'];
-//$STATAPIROOT = $docRoot . '/statapicache/';
-
-$STATAPIROOT = '../statapicache/';
-echo "STATAPIROOT: " . $STATAPIROOT . "\n";
-define('STATAPIROOT', $STATAPIROOT);
+echo "STATAPIROOT: " . $STATFILESPATH . "\n";
 
 $SYNONYMFILE = 'MetaSynonym.csv';
 define('SYNONYMFILE', $SYNONYMFILE);
 
-
-// Report all errors
-error_reporting(E_ALL);
-
 // Get a connection to the DB
-$DBCONN = sqlConnect($INI_dbserver, $INI_dbuser, $INI_dbpassword, $INI_dbname);
-
-echo "DB: " . $INI_dbserver . "\n";
-
-/*
-var_dump(extractDomainContractName("urn:riv:crm:carelisting:CreateListingResponder:1"));
-die('Done');
-*/
+$DBCONN = sqlConnectEnvs();
 
 echo "Start! \n";
 
@@ -74,14 +49,13 @@ echo("Load TAK data\n");
 // emptyDatabase("ALL"); !!!
 loadTakData();
 
-//echo("DO NOT Load statistics\n");
 // emptyDatabase("StatData");
-loadStatisticsSll();  //!!!!
+loadStatistics($STATFILESPATH);  //!!!!
 
 echo 'Klart!';
 echo '';
 
-// End of main program
+return; // End of main program
 
 
 function loadTakData()
@@ -164,17 +138,17 @@ function loadTakData()
 }
 
 // todo: Add a similar function to read Ineras CSV files
-function loadStatisticsSll()
+function loadStatistics($statFiles)
 {
-// todo: Behöver addera logik för att säkra att svarstider läggs på om det finns i indatafilen fär redan existerande stat-records
-    GLOBAL $STATAPIROOT;
+    echo "Will load statistics from path: " . $statFiles . "\n";
+
     GLOBAL $DBCONN;
 
     $DBCONN->begin_transaction();
 
     //foreach (glob($STATAPIROOT . "*.NEW.json") as $file) {
     //foreach (glob($STATAPIROOT . "*.STAT.json") as $file) {
-    foreach (glob($STATAPIROOT . "*.*.json") as $file) {
+    foreach (glob($statFiles . "/*.*.json") as $file) {
 
         $fileData = file_get_contents($file);
         $fileArr = json_decode($fileData, true);
@@ -459,7 +433,7 @@ function ensureRouting($plattformId, $timeStamp, $itemList, $lastSnapshotTimeInD
         }
         // And verify/update/insert in Routing and Url tables
         if ($routingId) {
-            ensureUrl($routingId, $url, $timeStamp, $lastSnapshotTimeInDb);
+            //ensureUrl($routingId, $url, $timeStamp, $lastSnapshotTimeInDb);
             ensureRivtaProfile($routingId, $rivtaProfile, $timeStamp, $lastSnapshotTimeInDb);
         }
     }
@@ -744,33 +718,10 @@ function ensureServiceDomain($domainName)
 
     return $id;
 }
-
+/*
 function ensureUrl($routingId, $url, $timeStamp, $lastSnapshotTimeInDb)
 {
-    /*
-    $select = "
-        SELECT id
-        FROM TakUrl
-        WHERE
-          routingId = ?
-          AND url = ?
-          AND dateEnd = ? 
-    ";
-    $result = sqlSelectPrep($select, "iss", array($routingId, $url, $lastSnapshotTimeInDb));
-    $numRows = $result->num_rows;
 
-    if ($numRows >= 1) {
-        // Record exist, update dateEnd
-        $row = $result->fetch_assoc();
-        $urlId = $row['id'];
-
-        $update = "
-            UPDATE TakUrl
-            SET dateEnd = ?
-            WHERE id = ?
-        ";
-        $dummy = sqlUpdatePrep($update, "si", array($timeStamp, $urlId));
-     */
 
     $update = "
             UPDATE TakUrl
@@ -792,7 +743,7 @@ function ensureUrl($routingId, $url, $timeStamp, $lastSnapshotTimeInDb)
         $dummy = sqlInsertPrep($insert, "isss", array($routingId, $url, $timeStamp, $timeStamp));
     }
 }
-
+*/
 function ensureRivtaProfile($routingId, $rivtaProfile, $timeStamp, $lastSnapshotTimeInDb)
 {
     /*
@@ -1124,12 +1075,12 @@ function emptyDatabase($scope)
         $i++;
         $sql[$i] = "ALTER TABLE TakIntegration AUTO_INCREMENT = 1";
         $i++;
-
+/*
         $sql[$i] = "DELETE FROM TakUrl WHERE id <> 0";
         $i++;
         $sql[$i] = "ALTER TABLE TakUrl AUTO_INCREMENT = 1";
         $i++;
-
+*/
         $sql[$i] = "DELETE FROM TakRivtaProfile WHERE id <> 0";
         $i++;
         $sql[$i] = "ALTER TABLE TakRivtaProfile AUTO_INCREMENT = 1";
@@ -1181,8 +1132,8 @@ function emptyDatabase($scope)
 
 function getConnectionPoints()
 {
-    global $BASEURL;
-    $cmdUrl = $BASEURL . 'connectionPoints';
+    global $TAKAPI_URL;
+    $cmdUrl = $TAKAPI_URL . 'connectionPoints';
     //return json_decode(file_get_contents($cmdUrl), true); // +++++
     return json_decode(callTakApi($cmdUrl), true);
 }
@@ -1218,8 +1169,8 @@ function getServiceContracts($connectionPointId)
 */
 function getCooperations($connectionPointId)
 {
-    global $BASEURL;
-    $cmdUrl = $BASEURL . 'cooperations?connectionPointId=' . $connectionPointId . '&include=serviceConsumer,serviceContract,logicalAddress';
+    global $TAKAPI_URL;
+    $cmdUrl = $TAKAPI_URL . 'cooperations?connectionPointId=' . $connectionPointId . '&include=serviceConsumer,serviceContract,logicalAddress';
 
     //return json_decode(file_get_contents($cmdUrl), true);
     // $content = file_get_contents($cmdUrl); // +++++
@@ -1234,8 +1185,10 @@ function getCooperations($connectionPointId)
 
 function getProductions($connectionPointId)
 {
-    global $BASEURL;
-    $cmdUrl = $BASEURL . 'serviceProductions?connectionPointId=' . $connectionPointId . '&include=serviceContract,logicalAddress,serviceProducer,physicalAddress';
+    global $TAKAPI_URL;
+    //$cmdUrl = $TAKAPI_URL . 'serviceProductions?connectionPointId=' . $connectionPointId . '&include=serviceContract,logicalAddress,serviceProducer,physicalAddress';
+    // Do not download full URLs anymore. Security reasons.
+    $cmdUrl = $TAKAPI_URL . 'serviceProductions?connectionPointId=' . $connectionPointId . '&include=serviceContract,logicalAddress,serviceProducer';
     //return json_decode(file_get_contents($cmdUrl), true);
 
     // $content = file_get_contents($cmdUrl); // +++++

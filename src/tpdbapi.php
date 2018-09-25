@@ -1,83 +1,48 @@
 <?php
 /**
- * Created by PhpStorm.
- * User: leo
- * Date: 3/8/16
- * Time: 8:14 PM
- * Cache the TAKAPI output to local files
- *
- * This program fetch and create cache files of the TAK-api.
- * The API is normally updated on a daily basis. A file is created per tak per day which store the output of the secen apu calls.
- * Then an index file is created, which contain information about the cache files,
- *
- * Name standard:
- *   takapi_NTJP-QA_2016-03-09.json (one per day per tak)
- *   takapicache_content.json
- *   tak
- *
- * Every time this pgm is run it feteches the connectionPoints, Then it compare the time stamps with the time stamps stored in
- * the takapicache file. If the takapi has been updated all api calls are executed and new cache files are created.
+    Copyright (C) 2013-2018 Lars Erik Röjerås
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-
-
-// todo: Use prep stmts. Check if those can be saved between calls
-
 //error_reporting(E_ALL ^ E_WARNING);
 //error_reporting(E_ALL ^ E_NOTICE);
+// A small edit to trigger rebuild again
 error_reporting(E_ALL);
 
 require 'leolib_sql.php';
-require 'leolib_debug.php';
+require_once 'leolib.php';
 
 $serverName = $_SERVER['SERVER_NAME'];
 
-/* TARGET::NOGUI */ $iniFile = "/home/leoroj/ini/statdb52.ini";
-/* TARGET::AWS */ $iniFile = "../lib/statdb52.ini";
-/* TARGET::LOCAL */ $iniFile = "../lib/statdb52.ini";
-
-$ini_array = parse_ini_file($iniFile, true);
-
-$environment = '[[DATABASE]]'; // Will be substituted by build.py
-/* TARGET::REMOVE_DURING_BUILD */ $environment = 'DB-LOCAL';
-
-// !!! TEMPTEMPTEMP
-/// $environment = 'DB-AWS';
-// TEMPTEMPTEMP
-
-$ini_values = $ini_array[$environment];
-
-$INI_dbserver = $ini_values['dbserver'];
-$INI_dbuser = $ini_values['dbuserro'];
-$INI_dbpassword = $ini_values['dbpasswordro'];
-$INI_dbname = $ini_values['dbname'];
+$DBCONN = sqlConnectEnvs();
 
 header('Access-Control-Allow-Origin: *');
-//header('Access-Control-Allow-Methods: GET');
-
-$DBCONN = sqlConnect($INI_dbserver, $INI_dbuser, $INI_dbpassword, $INI_dbname);
-
-$command = "";
-$scriptName = basename(__FILE__, 'takapidb.php');
-
-$uriPrefix = '/newversion/statdb/statdb.php/api/v1/';
-$requestURI = $_SERVER['REQUEST_URI'];
+$scriptName = basename(__FILE__, 'tpdbapi.php');
 
 if (isset($_SERVER['QUERY_STRING'])) {
     $queryString = $_SERVER['QUERY_STRING'];
 } else {
-    $queryString = '';
+    $queryString  =  '';
 }
 
-$docRoot = $_SERVER['DOCUMENT_ROOT'];
-
-$TYPE = str_replace($uriPrefix, "", $requestURI);
+$requestURI = $_SERVER['REQUEST_URI'];
+$TYPE = substr(strrchr( $requestURI, '/'), 1);
 $TYPE = str_replace('?' . $queryString, "", $TYPE);
 define('TYPE', $TYPE);
 
 // Parse the input params
 parse_str($queryString, $queryArr);
-
-//$includeParam = $queryArr['include'];
 
 // Definitions of the API
 switch ($TYPE) {
