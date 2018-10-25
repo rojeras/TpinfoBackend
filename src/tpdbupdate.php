@@ -103,6 +103,8 @@ function loadTakData()
             continue;
         }
 
+        echo "-------------------------------------------------------\n";
+
         $cooperations = getCooperations($connectionPoint);
 
         $productions = getProductions($connectionPoint);
@@ -124,6 +126,7 @@ function loadTakData()
             echo "*** Error reading json file(s) for connectionPoint=" . $connectionPoint . ", " . $plattform . " " . $environment . " : " . $timeStamp . "\n";
         }
     }
+
 
 // Need to do an update of TakIntegration here at the end of the processing
 // It is enough to do it once since it picks up the dates from the underlying routings and call authorizations.
@@ -507,6 +510,17 @@ function ensureIntegration($timestamp, $lastSnapshotTimeInDb)
         ));
         $numRowsFromTable = $resultFromTable->num_rows;
 
+        /*
+        // Temp stuff
+        if ($consumerId == 969) {
+            echo "\n";
+            echo "consumerId = " . $consumerId . "\n";
+            echo "numOfRowsFromTable = " . $numRowsFromTable . "\n";
+            echo "lastSnapshotTimeInDb = " . $lastSnapshotTimeInDb . "\n";
+            echo "timeStamp = " . $timestamp . "\n";
+        }
+        */
+
         // Should never be more than one answer row
         if ($numRowsFromTable == 0) {
             //echo ("Inserting new record in TakIntegration\n");
@@ -549,17 +563,28 @@ function ensureIntegration($timestamp, $lastSnapshotTimeInDb)
             $rowFromTable = $resultFromTable->fetch_assoc();
             $dateEndInTable = $rowFromTable['dateEnd'];
 
+            /*
+            if ($consumerId == 969) {
+                echo "dateEndInTable = " . $dateEndInTable . "\n";
+                echo "dateEndInView = " . $dateEndInView . "\n";
+            }
+            */
+
             //echo("Date in table=" . $dateEndInTable . "  lastSnapshotTimeInDb=" . $lastSnapshotTimeInDb . "\n");
-            if (($dateEndInTable == $lastSnapshotTimeInDb) && ($dateEndInView == $timestamp)) {
-                //echo(" --> updating date \n");
-                $integrationId = $rowFromTable['id'];
-                $update = "
+            // Existing record(s), if it has an dateEnd = $lastSnapshotTimeInDb in the TakIntegration table - update the field to $timestamp
+            // But, it should only be updated if the dateEnd from the view is equal to $timestamp -- 2018-02-09
+            if ($dateEndInView == $timestamp) {
+                // 2018-10-25: below from == to <= . So, if a record is found (including specific dateEffective, its endDate should always move to today (timeStamp) (even thought i might be gaps)
+                if ($dateEndInTable <= $lastSnapshotTimeInDb) {
+                    $integrationId = $rowFromTable['id'];
+                    $update = "
                   UPDATE TakIntegration
                   SET 
                     dateEnd = ?
                   WHERE id = ?
                 ";
-                $dummy = sqlUpdatePrep($update, "si", array($timestamp, $integrationId));
+                    $dummy = sqlUpdatePrep($update, "si", array($timestamp, $integrationId));
+                }
             }
         } else {
             // $numRowsFromTable > 1 - Should be an internal error
