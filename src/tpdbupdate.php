@@ -1068,10 +1068,12 @@ function getLastSnapshotTimeInIntegrations()
 }
 
 
+
 function getValue($arr, $key)
 {
     if (array_key_exists($key, $arr)) {
-        return $arr[$key];
+        $result = preg_replace('/[\x00-\x1F]/', '', $arr[$key]);
+        return $result;
     } else {
         //echo "getValue(): key=" . $key . " värde saknas i följande item:\n";
         //var_dump($arr);
