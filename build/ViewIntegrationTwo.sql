@@ -1,3 +1,4 @@
+DROP VIEW IF EXISTS ViewIntegrationTwo;
 CREATE VIEW ViewIntegrationTwo AS
   SELECT DISTINCT
     leftMeta.takPlattformId AS firstPlattformId,
