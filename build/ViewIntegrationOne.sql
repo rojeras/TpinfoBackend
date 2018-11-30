@@ -1,3 +1,4 @@
+DROP VIEW IF EXISTS ViewIntegrationOne;
 CREATE VIEW ViewIntegrationOne AS
   SELECT DISTINCT
     auth.plattformId           AS firstPlattformId,
