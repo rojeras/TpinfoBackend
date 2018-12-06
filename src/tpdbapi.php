@@ -21,6 +21,9 @@
 error_reporting(E_ALL);
 ini_set('memory_limit', '256M');
 
+$VERSION = '6.0.1';
+$DEPLOYDATE = '2018-12-06';
+
 require 'leolib_sql.php';
 require_once 'leolib.php';
 
@@ -107,10 +110,15 @@ switch ($TYPE) {
         break;
 
     case "version":
-        $resultArr = getVersion();
-        echo json_encode($resultArr);
+        echo '[{"version": "' . $VERSION . '" , "deployDate" : "' .  $DEPLOYDATE . '"}]';
         break;
 
+    /*
+case "version":
+    $resultArr = getVersion();
+    echo json_encode($resultArr);
+    break;
+*/
     case "ping":
         echo "PING ANSWER...";
         break;
@@ -361,27 +369,27 @@ function getPlattformChainArray()
 
     $select = "
         SELECT DISTINCT
-            concat(firstPlattformId, '-', lastPlattformId) AS id
+            firstPlattformId, 
+            middlePlattformId,
+            lastPlattformId 
         FROM
             TakIntegration
-        WHERE
-            firstPlattformId <> lastPlattformId
-                        
-        UNION
-        SELECT  id
-            FROM TakPlattform
-            
-        ORDER BY id   
+        ORDER BY 1, 2, 3
     ";
 
     $result = sqlSelectPrep($select, "", array());
 
     $resultArr = array();
-    while ($row = $result->fetch_assoc()) {
+    $idCounter = 0;
+    while ($row = $result->fetch_array()) {
         $recordArr = array(
-            "id" => $row['id']
+            "id" => $idCounter,
+            "plattforms" => [$row[0], $row[1], $row[2]]
         );
         $resultArr[] = $recordArr;
+        $idCounter++;
+
+        //$resultArr[] = [$row[0], $row[1], $row[2]] ;
     }
 
     return $resultArr;
@@ -431,6 +439,10 @@ function getMaxCountersArray($firstDate, $lastDate)
  * It handles updateDates(), but not statistics and history
  * For hippo, this function will be very much faster than getIntegrationsArray(). And, the answer set is much smaller.
  */
+/*
+ * Let us hide this function for the time being. It is faster that loadIntegrations() for hippo, but
+ * due to the hippo cache this speedup is not really needed. Do not want to support to versions.
+
 function getCurrentItemsArray($queryArr)
 {
 
@@ -501,6 +513,7 @@ function getCurrentItemsArray($queryArr)
 
     return $answerArr;
 }
+*/
 
 function getIntegrationArray($queryArr)
 {
