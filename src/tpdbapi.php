@@ -1,24 +1,28 @@
 <?php
 /**
-    Copyright (C) 2013-2018 Lars Erik Röjerås
-
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ * Copyright (C) 2013-2018 Lars Erik Röjerås
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 //error_reporting(E_ALL ^ E_WARNING);
 //error_reporting(E_ALL ^ E_NOTICE);
 // A small edit to trigger rebuild again
 error_reporting(E_ALL);
+ini_set('memory_limit', '256M');
+
+$VERSION = '6.2';
+$DEPLOYDATE = '2019-01-27';
 
 require 'leolib_sql.php';
 require_once 'leolib.php';
@@ -33,11 +37,11 @@ $scriptName = basename(__FILE__, 'tpdbapi.php');
 if (isset($_SERVER['QUERY_STRING'])) {
     $queryString = $_SERVER['QUERY_STRING'];
 } else {
-    $queryString  =  '';
+    $queryString = '';
 }
 
 $requestURI = $_SERVER['REQUEST_URI'];
-$TYPE = substr(strrchr( $requestURI, '/'), 1);
+$TYPE = substr(strrchr($requestURI, '/'), 1);
 $TYPE = str_replace('?' . $queryString, "", $TYPE);
 define('TYPE', $TYPE);
 
@@ -100,11 +104,21 @@ switch ($TYPE) {
         echo json_encode($answerArr);
         break;
 
-    case "version":
-        $resultArr = getVersion();
-        echo json_encode($resultArr);
+    case "currentItems":
+        $answerArr = getCurrentItemsArray($queryArr);
+        echo json_encode($answerArr);
         break;
 
+    case "version":
+        echo '[{"version": "' . $VERSION . '" , "deployDate" : "' .  $DEPLOYDATE . '"}]';
+        break;
+
+    /*
+case "version":
+    $resultArr = getVersion();
+    echo json_encode($resultArr);
+    break;
+*/
     case "ping":
         echo "PING ANSWER...";
         break;
@@ -147,6 +161,24 @@ function getConnectionPointArray()
     }
 
     return $resultArr;
+}
+
+function getLastDate()
+{
+
+    $select = " 
+        SELECT   
+          MAX(dateEnd) AS DateEnd
+        FROM
+          TakIntegration
+        ";
+
+    $result = sqlSelectPrep($select, "", array());
+
+    $row = $result->fetch_assoc();
+
+    return $row['DateEnd'];
+
 }
 
 function getDateArray()
@@ -337,27 +369,27 @@ function getPlattformChainArray()
 
     $select = "
         SELECT DISTINCT
-            concat(firstPlattformId, '-', lastPlattformId) AS id
+            firstPlattformId, 
+            middlePlattformId,
+            lastPlattformId 
         FROM
             TakIntegration
-        WHERE
-            firstPlattformId <> lastPlattformId
-                        
-        UNION
-        SELECT  id
-            FROM TakPlattform
-            
-        ORDER BY id   
+        ORDER BY 1, 2, 3
     ";
 
     $result = sqlSelectPrep($select, "", array());
 
     $resultArr = array();
-    while ($row = $result->fetch_assoc()) {
+    $idCounter = 0;
+    while ($row = $result->fetch_array()) {
         $recordArr = array(
-            "id" => $row['id']
+            "id" => $idCounter,
+            "plattforms" => [$row[0], $row[1], $row[2]]
         );
         $resultArr[] = $recordArr;
+        $idCounter++;
+
+        //$resultArr[] = [$row[0], $row[1], $row[2]] ;
     }
 
     return $resultArr;
@@ -388,7 +420,7 @@ function getMaxCountersArray($firstDate, $lastDate)
         $recordArr = array(
             "consumers" => $row['consumers'],
             "contracts" => $row['contracts'],
-            "domains"   => $row['domains'],
+            "domains" => $row['domains'],
             "plattformChains" => $row['plattformChains'],
             "logicalAddress" => $row['logicalAddress'],
             "producers" => $row['producers']
@@ -400,16 +432,103 @@ function getMaxCountersArray($firstDate, $lastDate)
     //return $resultArr;
 }
 
-//function getIntegrationArray($firstPlattformId, $middlePlattformId, $lastPlattformId, $dateEffective, $dateEnd, $consumerId, $producerId, $contractId, $domainId, $laId) {
-function getIntegrationArray($queryArr)
+/*
+ * getCurrentItemsArray()
+ * This function mimics much of the getIntegrationsArray() function, but returns the data in a different dimension
+ * It collects arrays of all items part of the filtered integrations defined by the $queryArr.
+ * It handles updateDates(), but not statistics and history
+ * For hippo, this function will be very much faster than getIntegrationsArray(). And, the answer set is much smaller.
+ */
+/*
+ * Let us hide this function for the time being. It is faster that loadIntegrations() for hippo, but
+ * due to the hippo cache this speedup is not really needed. Do not want to support to versions.
+
+function getCurrentItemsArray($queryArr)
 {
+
+    $today = getLastDate();
 
     list($dateEffective,
         $dateEnd,
         $whereClauseIntegrations,
         $typeStringIntegrations,
         $paramArrayIntegrations,
-        $include) = mkWhereClauseFromParams($queryArr);
+        $include,
+        $whereClauseIntegrationsWithoutDates,
+        $paramArrayIntegrationsWithoutDates,
+        $typeStringIntegrationsWithoutDates) = mkWhereClauseFromParams($queryArr);
+
+    $keyArr = array();
+    $keyArr[0] = ['firstPlattformId', 'firstPlattforms'];
+    $keyArr[1] = ['middlePlattformId', 'middlePlattforms'];
+    $keyArr[2] = ['lastPlattformId', 'lastPlattforms'];
+    $keyArr[3] = ['logicalAddressId', 'logicalAddress'];
+    $keyArr[4] = ['contractId', 'contracts'];
+    $keyArr[5] = ['domainId', 'domains'];
+    $keyArr[6] = ['consumerId', 'consumers'];
+    $keyArr[7] = ['producerId', 'producers'];
+
+    for ($i = 0; $i < 8; $i++) {
+        $selectCI = "
+        SELECT DISTINCT " . $keyArr[$i][0] .
+            " FROM TakIntegration  
+          " . $whereClauseIntegrations .
+            " ORDER BY " . $keyArr[$i][0];
+
+        $result = sqlSelectPrep($selectCI, $typeStringIntegrations, $paramArrayIntegrations);
+
+        $resultArr = array();
+
+        while ($row = $result->fetch_array()) {
+            $value = $row[0];
+            $resultArr[] = $value;
+        }
+
+        $itemsArr[$keyArr[$i][1]] = $resultArr;
+
+    }
+
+    $selectCI = "
+        SELECT DISTINCT 
+            firstPlattformId, 
+            middlePlattformId,
+            lastPlattformId
+        FROM TakIntegration " .
+        $whereClauseIntegrations . "
+        ORDER BY firstPlattformId, middlePlattformId, lastPlattformId";
+
+    $result = sqlSelectPrep($selectCI, $typeStringIntegrations, $paramArrayIntegrations);
+
+    $resultArr = array();
+
+    while ($row = $result->fetch_array()) {
+        $resultArr[] = [$row[0], $row[1], $row[2]] ;
+    }
+
+    $itemsArr['plattformChains'] = $resultArr;
+
+    $answerArr['currentItems'] = $itemsArr;
+    $answerArr['maxCounters'] = getMaxCountersArray($dateEffective, $dateEnd);
+    $answerArr['updateDates'] = getUpdatedDatesList($today, $whereClauseIntegrationsWithoutDates, $typeStringIntegrationsWithoutDates, $paramArrayIntegrationsWithoutDates);
+
+    return $answerArr;
+}
+*/
+
+function getIntegrationArray($queryArr)
+{
+
+    $today = getLastDate();
+
+    list($dateEffective,
+        $dateEnd,
+        $whereClauseIntegrations,
+        $typeStringIntegrations,
+        $paramArrayIntegrations,
+        $include,
+        $whereClauseIntegrationsWithoutDates,
+        $paramArrayIntegrationsWithoutDates,
+        $typeStringIntegrationsWithoutDates) = mkWhereClauseFromParams($queryArr);
 
     $selectIntegrations1 = "
     SELECT DISTINCT
@@ -424,6 +543,7 @@ function getIntegrationArray($queryArr)
         domainId,
         consumerId,
         producerId";
+
     $selectIntegrations3 = " FROM TakIntegration ";
 
     $selectIntegrations = $selectIntegrations1 . $selectIntegrations2 . $selectIntegrations3 . $whereClauseIntegrations;
@@ -445,9 +565,12 @@ function getIntegrationArray($queryArr)
         );
     }
 
+    //echo "selectIntegrations = " . $selectIntegrations . "\n";
+
     $result = sqlSelectPrep($selectIntegrations, $typeStringIntegrations, $paramArrayIntegrations);
 
     $resultArr = array();
+
     while ($row = $result->fetch_assoc()) {
 
         $integrationId = $row['id'];
@@ -462,6 +585,7 @@ function getIntegrationArray($queryArr)
             $row["domainId"],           // 6
             $row["consumerId"],         // 7
             $row["producerId"]          // 8
+
         );
 
         if (array_key_exists($integrationId, $statArray)) {
@@ -480,16 +604,17 @@ function getIntegrationArray($queryArr)
 
         }
         $resultArr[] = $recordArr;
+
     }
 
     $answerArr['integrations'] = $resultArr;
-
 
     if (strpos($include, 'history') !== false) {
         $answerArr['history'] = getHistoryArray($queryArr);
     }
 
     $answerArr['maxCounters'] = getMaxCountersArray($dateEffective, $dateEnd);
+    $answerArr['updateDates'] = getUpdatedDatesList($today, $whereClauseIntegrationsWithoutDates, $typeStringIntegrationsWithoutDates, $paramArrayIntegrationsWithoutDates);
 
     return $answerArr;
 }
@@ -499,16 +624,16 @@ function getStatPlattformArray()
 
     $select = "
     SELECT DISTINCT
-      ti.lastPlattformId,
-      tp.name,
-      tp.environment
+      ti . lastPlattformId,
+      tp . name,
+      tp . environment
     FROM
       TakIntegration ti,
       TakPlattform tp,
       StatData sd
     WHERE
-          sd.integrationId = ti.id
-      AND ti.lastPlattformId = tp.id
+          sd . integrationId = ti . id
+          AND ti . lastPlattformId = tp . id
     ";
 
     $result = sqlSelectPrep($select, "", array());
@@ -546,11 +671,11 @@ function getStatistics($dateEffective,
       WHERE
             day >= ?
         AND day <= ?
-        AND integrationId IN ( 
-        ";
+        AND integrationId IN(
+    ";
 
     $selectStat2 = "
-        )
+)
       GROUP BY integrationId
       ";
 
@@ -574,6 +699,42 @@ function getStatistics($dateEffective,
     }
     return $resultArr;
 }
+
+function getUpdatedDatesList($today, $whereClauseIntegrationsWithoutDates, $typeStringIntegrationsWithoutDates, $paramArrayIntegrationsWithoutDates)
+{
+    $dateSelect = "
+        SELECT DISTINCT
+            dateEffective AS dateEffective,
+            dateEnd AS dateEnd
+        FROM TakIntegration   
+        ";
+
+    $dateSelect .= $whereClauseIntegrationsWithoutDates;
+
+    //echo $dateSelect . "\n";
+
+    $result = sqlSelectPrep($dateSelect, $typeStringIntegrationsWithoutDates, $paramArrayIntegrationsWithoutDates);
+
+    $updateDates = array();
+    while ($row = $result->fetch_assoc()) {
+        //echo $row["dateEffective"] . " " . $row["dateEnd"] . "\n";
+        array_push($updateDates, $row["dateEffective"]);
+
+        // If not today; add 1 to dateEnd to specify day when difference can be seen
+        $dateEnd = $row["dateEnd"];
+        if ($dateEnd !== $today) {
+            array_push($updateDates, incDate($dateEnd));                // 10
+        }
+    }
+
+    array_push($updateDates, $today);                // We also need today (always)
+
+    $updateDates = array_unique($updateDates);
+    rsort($updateDates);
+
+    return $updateDates;
+}
+
 
 function getVersion()
 {
@@ -599,6 +760,7 @@ function getVersion()
     return $resultArr;
 }
 
+// The history array it used to show the "Visa utveckling över tid" in statistics
 function getHistoryArray($queryArr)
 {
 
@@ -607,7 +769,10 @@ function getHistoryArray($queryArr)
         $whereClauseIntegrations,
         $typeStringIntegrations,
         $paramArrayIntegrations,
-        $include) = mkWhereClauseFromParams($queryArr);
+        $include,
+        $dummy1,
+        $dummy2,
+        $dummy3) = mkWhereClauseFromParams($queryArr);
 
     $selectStat1 = "
         SELECT
@@ -619,8 +784,8 @@ function getHistoryArray($queryArr)
         WHERE
           day >= ?
           AND day <= ?
-          AND integrationId IN ( 
-              SELECT id
+          AND integrationId IN(
+    SELECT id
               FROM TakIntegration  
           ";
 
@@ -650,6 +815,8 @@ function getHistoryArray($queryArr)
 
 function mkWhereClauseFromParams($queryArr)
 {
+    $today = getLastDate();
+
     $include = '';
     if (isset($queryArr['include'])) {
         $include = $queryArr['include'];
@@ -658,7 +825,7 @@ function mkWhereClauseFromParams($queryArr)
     // Build a WHERE clause based on the filter parameters
     $typeStringIntegrations = '';
     $paramArrayIntegrations = array();
-    $whereClauseIntegrations = 'WHERE '; // We know there will always be a WHERE clause, the dates are mandatory (with default values)
+    $whereClauseIntegrations = 'WHERE TRUE '; // This way we know there can always be a WHERE clause
 
     $legalParams = array(
         'firstPlattformId',
@@ -688,35 +855,63 @@ function mkWhereClauseFromParams($queryArr)
         }
     }
 
+    // These three values will be used to select the list of dates when the filter have changed
+    $whereClauseIntegrationsWithoutDates = $whereClauseIntegrations;
+    $paramArrayIntegrationsWithoutDates = $paramArrayIntegrations;
+    $typeStringIntegrationsWithoutDates = $typeStringIntegrations;
+
+    // Now we add the two date parameters
     $dateEffective = null;
+    if (strlen($whereClauseIntegrations) > 7) {
+        $whereClauseIntegrations .= ' AND ';
+    }
+    $whereClauseIntegrations .= ' dateEffective <= ?';
     if (isset($queryArr['dateEffective'])) {
         $dateEffective = $queryArr['dateEffective'];
-        $typeStringIntegrations .= 's';
-        $paramArrayIntegrations[] = $dateEffective;
-        if (strlen($whereClauseIntegrations) > 7) {
-            $whereClauseIntegrations .= ' AND ';
-        }
-        //$whereClauseIntegrations .= 'dateEffective <= ?';
-        $whereClauseIntegrations .= 'dateEnd >= ?';
+    } else {
+        $dateEffective = $today;
     }
+    $typeStringIntegrations .= 's';
+    $paramArrayIntegrations[] = $dateEffective;
+    if (strlen($whereClauseIntegrations) > 7) {
+        $whereClauseIntegrations .= ' AND ';
+    }
+    //$whereClauseIntegrations .= 'dateEffective <= ?';
+    $whereClauseIntegrations .= 'dateEnd >= ?';
+
     if (isset($queryArr['dateEnd'])) {
         $dateEnd = $queryArr['dateEnd'];
     } else {
         // Default for the dateEnd parameters is the last day the TAK is updated
-        $dateArr = getDateArray();
-        $dateEnd = $dateArr['integrations'][0];
+        $dateEnd = $today;
     }
 
     // Add clause for the two dateEnd which are always included
     $typeStringIntegrations .= 's';
     $paramArrayIntegrations[] = $dateEnd;
-    if (strlen($whereClauseIntegrations) > 7) {
-        $whereClauseIntegrations .= ' AND ';
-    }
-    //$whereClauseIntegrations .= ' dateEnd >= ?';
-    $whereClauseIntegrations .= ' dateEffective <= ?';
 
-    return array($dateEffective, $dateEnd, $whereClauseIntegrations, $typeStringIntegrations, $paramArrayIntegrations, $include);
+    //$whereClauseIntegrations .= ' dateEnd >= ?';
+
+    /*
+    echo "queryArr = \n";
+    var_dump($queryArr);
+    echo "dateEffective = " . $dateEffective . "\n";
+    echo "dateEnd = " . $dateEnd . "\n";
+    echo "whereClauseIntegrations = " . $whereClauseIntegrations . "\n";
+    echo "whereClauseIntegrationsWithoutDate = " . $whereClauseIntegrationsWithoutDates . "\n";
+    echo "paramArrayIntegrations = \n";
+    var_dump($paramArrayIntegrations);
+    */
+
+    return array($dateEffective, $dateEnd, $whereClauseIntegrations, $typeStringIntegrations, $paramArrayIntegrations, $include,
+        $whereClauseIntegrationsWithoutDates, $paramArrayIntegrationsWithoutDates, $typeStringIntegrationsWithoutDates);
+}
+
+function incDate($inDate)
+{
+    $date = date_create($inDate);
+    date_add($date, date_interval_create_from_date_string('1 days'));
+    return date_format($date, 'Y-m-d');
 }
 
 ?>

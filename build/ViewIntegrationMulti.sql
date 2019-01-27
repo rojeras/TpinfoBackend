@@ -1,3 +1,4 @@
+DROP VIEW IF EXISTS ViewIntegrationMulti;
 CREATE VIEW ViewIntegrationMulti AS
   SELECT
     firstPlattformId,
