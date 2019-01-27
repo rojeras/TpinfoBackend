@@ -21,8 +21,8 @@
 error_reporting(E_ALL);
 ini_set('memory_limit', '256M');
 
-$VERSION = '6.0.1';
-$DEPLOYDATE = '2018-12-06';
+$VERSION = '6.2';
+$DEPLOYDATE = '2019-01-27';
 
 require 'leolib_sql.php';
 require_once 'leolib.php';
