@@ -48,8 +48,8 @@ function mkStatHistory($path)
 
     $select = "
     SELECT DISTINCT
-      SUBSTRING(day, 1, 7) AS MONTH
-    FROM StatData
+      SUBSTRING(date, 1, 7) AS MONTH
+    FROM StatDataTable
     ORDER BY MONTH;
     ";
 
@@ -85,7 +85,7 @@ function createHistoryFile($path, $month) {
        'Calls'
     UNION ALL
     (SELECT DISTINCT
-                stats.day             AS Date,
+                stats.date            AS Date,
                 consumer.value        AS ConsumerHSA,
                 consumer.description  AS ConsumerDescription,
                 domain.domainName     AS Domain,
@@ -101,18 +101,17 @@ function createHistoryFile($path, $month) {
      TakServiceContract contract,
      TakServiceDomain domain,
      TakLogicalAddress la,
-     StatData stats,
-     TakIntegration integr
+     StatDataTable stats
     WHERE
-          integr.consumerId = consumer.id
-      AND integr.contractId = contract.id
+          stats.consumerId = consumer.id
+      AND stats.contractId = contract.id
       AND contract.serviceDomainId = domain.id
-      AND integr.logicalAddressId = la.id
-      AND integr.producerid = producer.id
-      AND integr.lastPlattformId = 3
-      AND stats.integrationId = integr.id
+      AND stats.logicalAddressId = la.id
+      AND stats.producerid = producer.id
+      AND stats.plattformId = 3
+      AND stats.producerId IS NOT NULL
         -- AND (stats.day between DATE_FORMAT(NOW(), '%Y-%m-01') AND NOW())
-      AND DATE_FORMAT(stats.day, '%Y-%m') LIKE ?
+      AND DATE_FORMAT(stats.date, '%Y-%m') LIKE ?
     -- AND stats.day = '2018-04-10'
     ORDER BY Date, Domain, Contract
     )";
