@@ -1,19 +1,19 @@
 <?php
 /**
-    Copyright (C) 2013-2018 Lars Erik Röjerås
-
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ * Copyright (C) 2013-2018 Lars Erik Röjerås
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 ini_set('memory_limit', '1024M');
 ini_set('max_execution_time', 2000);
@@ -45,9 +45,15 @@ $DBCONN = sqlConnectEnvs();
 
 echo "Start! \n";
 
+
+echo("Check if DB updated\n");
+upgrade_62_to_64();
+
+
 echo("Load TAK data\n");
 // emptyDatabase("ALL"); !!!
 loadTakData();
+
 
 // emptyDatabase("StatData");
 loadStatistics($STATFILESPATH);  //!!!!
@@ -145,12 +151,16 @@ function loadStatistics($statFiles)
 {
     echo "Will load statistics from path: " . $statFiles . "\n";
 
+    // We will need an array of which dates the TakRouting has been updated to calculate "dateBefore"
+    // Needed when we analyze TakRouting to find the producer for a certain log record
+    $routingDates = getRoutingUpdateDates();
+
     GLOBAL $DBCONN;
 
     $DBCONN->begin_transaction();
 
     //foreach (glob($STATAPIROOT . "*.NEW.json") as $file) {
-    //foreach (glob($STATAPIROOT . "*.STAT.json") as $file) {
+    // foreach (glob($statFiles . "/SLL-PROD_2019-06*.json") as $file) {
     foreach (glob($statFiles . "/*.*.json") as $file) {
 
         $fileData = file_get_contents($file);
@@ -158,16 +168,23 @@ function loadStatistics($statFiles)
 
         $plattform = $fileArr['plattform'];
 
-//        if ($plattform !== 'SLL-PROD') {
-//            continue;
-//        }
-
-        echo "Process " . $file . "\n";
+        if ($plattform == "SLL_QA") {
+            $plattform = "SLL-QA";
+        }
+        if ($plattform == "SLL_PROD") {
+            $plattform = "SLL-PROD";
+        }
 
         $startDate = $fileArr["startDate"];
         $endDate = $fileArr["endDate"];
+        $updateDateBefore = getUpdateDateBefore($routingDates, $startDate);
+        $updateDateAfter = getUpdateDateAfter($routingDates, $startDate);
+
+        //echo "updateBeforeDate = " . $updateDateBefore . "\n";
 
         $statisticsArr = $fileArr["statistics"];
+        echo "Process " . $file . ", number of entries: " . count($statisticsArr) . "\n";
+
 
         for ($i = 0; $i < count($statisticsArr); $i++) {
             $item = $statisticsArr[$i];
@@ -182,12 +199,15 @@ function loadStatistics($statFiles)
                 $consumerId = $originalConsumerId;
             }
 
+            if (!$consumerId) {
+                echo "*** Error, consumerId is null!";
+            }
             // Calculate and use mean number of calls per day
             $allCalls = $item["calls"];
             $noOfDays = dateDifference($startDate, $endDate) + 1;
             $calls = intdiv($allCalls, $noOfDays);
 
-            // There might be respone time data in the files
+            // There might be response time data in the files
             $meanResponsTime = null;
             if (isset($item["averageResponseTime"])) {
                 $meanResponsTime = $item["averageResponseTime"];
@@ -196,9 +216,12 @@ function loadStatistics($statFiles)
             $namespace = $item["namespace"];
             $logicalAddress = $item["logicalAddress"];
 
-            ensureStatistics($firstPlattformHsaId, $plattform, $consumerId, $calls, $meanResponsTime, $namespace, $logicalAddress, $startDate, $endDate);
+            ensureStatisticsV2($firstPlattformHsaId, $plattform, $consumerId, $calls, $meanResponsTime, $namespace, $logicalAddress, $startDate, $endDate, $updateDateBefore, $updateDateAfter);
         }
     }
+
+    // This function currently not used
+    // ensureStatisticsV2PostProcess();
 
     $DBCONN->commit();
 }
@@ -445,7 +468,6 @@ function ensureRouting($plattformId, $timeStamp, $itemList, $lastSnapshotTimeInD
 // endoreIntegration(), use the ViewIntegrationMulti and use it as a base to updated the table with integration info
 function ensureIntegration($timestamp, $lastSnapshotTimeInDb)
 {
-
     // Go through all records returned from the integration view, and insert/update the integration table
     $selectFromView = "
     SELECT
@@ -592,7 +614,6 @@ function ensureIntegration($timestamp, $lastSnapshotTimeInDb)
         }
     }
 }
-
 
 function ensureServiceComponent($value, $description)
 {
@@ -743,6 +764,7 @@ function ensureServiceDomain($domainName)
 
     return $id;
 }
+
 /*
 function ensureUrl($routingId, $url, $timeStamp, $lastSnapshotTimeInDb)
 {
@@ -819,175 +841,128 @@ function ensureRivtaProfile($routingId, $rivtaProfile, $timeStamp, $lastSnapshot
 }
 
 
-function ensureStatistics($firstPlattformHsaId, $plattform, $consumerId, $calls, $averageResponsTime, $namespace, $logicalAddress, $startDate, $endDate)
+
+function ensureStatisticsV2($firstPlattformHsaId, $plattform, $consumerHsa, $calls, $averageResponsTime, $namespace, $logicalAddressString, $startDate, $endDate, $updateDateBefore, $updateDateAfter)
 {
+    /*
+ * todo: Manage error in the indata files, see example below
+ * Felaktiga HSA-id, ta bort
+* ${httpHeaderHsaId
+* 444
+* SE2321000016-1HZ3
+* SE2321000016-I1B6
+ */
 
-    // Handle the case where the logica address field contains a "#" to separate two addresses
-    $logicalAddressArr = array_reverse(explode("#", $logicalAddress));
-
-    //if (array_key_exists(1, $logicalAddressArr)) {
-    //var_dump($logicalAddressArr);
-    //}
+    if ($consumerHsa == '${httpHeaderHsaId' ||
+        $consumerHsa == '444' ) {
+        return;
+    }
 
 
-    $plattformName = strtok($plattform, "-");
-    $plattformEnvir = strtok("-");
+    $firstPlattformId = getTakRecordId("MetaPlattformHsaId", "takPlattformId", "hsaId", $firstPlattformHsaId);
+    $plattformId = getPlattformId($plattform);
+    $consumerId = getTakRecordId("TakServiceComponent", "id", "value", $consumerHsa);
+    if (!$consumerId) {
+
+        echo "Unknown consumer with HSA-id = " . $consumerHsa . " will be added.\n";
+        $consumerId = ensureServiceComponent($consumerHsa, "*** Okänd tjänstekomponent - använd i faktiskt anrop");
+    }
+    $contractId = getTakRecordId("TakServiceContract", "id", "namespace", $namespace);
+
+    // Handle the case where the logical address field contains a "#" to separate two addresses
+    // We only take the rightmost part of a concatenated LA (by reversing the array and extract the first)
+    $hashLogicalAddressId = null;
+    $seLogicalAddressId = null;
+
+    $logicalAddressArr = array_reverse(explode("#", $logicalAddressString));
+    if (array_key_exists(1, $logicalAddressArr)) {
+        $logicalAddress = $logicalAddressArr[0];
+        $hashLogicalAddressId = getTakRecordId("TakLogicalAddress", "id", "value", $logicalAddressArr[1]);
+    } else {
+        $logicalAddress = $logicalAddressString;
+    }
+    $logicalAddressId = getTakRecordId("TakLogicalAddress", "id", "value", $logicalAddress);
+    if (!$logicalAddressId) {
+        echo "*** Unknown logical address = " . $logicalAddress . " will be added\n";
+        $logicalAddressId = ensureLogicalAddress($logicalAddress, "*** Okänd logisk adress - använd i faktiskt anrop");
+    }
+
+    // Lets also add support for default routing, both using SE and *
+    $seLogicalAddressId = getTakRecordId("TakLogicalAddress", "id", "value", "SE");
+    if (!$seLogicalAddressId) {
+        $seLogicalAddressId = getTakRecordId("TakLogicalAddress", "id", "value", "*");
+    }
+
+    $producerId = searchProducerId($plattformId, $logicalAddressId, $hashLogicalAddressId, $seLogicalAddressId, $contractId, $updateDateBefore, $startDate, $updateDateAfter);
+
+    if ($producerId == null) {
+        echo "\n*** Producer NOT found; TP=" . $plattform . ", LA arr=" . $logicalAddressString . ", NS=" . $namespace . "\n";
+        //echo "updateDateBefore=" . $updateDateBefore . ", updateDate=" . $startDate . " updateDateAfter=" . $updateDateAfter . "\n";
+    }
 
     $noOfDays = dateDifference($startDate, $endDate) + 1;
-
     /*
-    echo $originalConsumerId . "\n";
-    echo $consumerId . "\n";
-    echo $calls . "\n";
-    echo $namespace . "\n";
-    echo $logicalAddress . "\n";
+sed 's/echo/echo\n/g' FILE | grep -c "echo"
     */
 
     // Loop through the dates and verify
     $date = $startDate;
     while ($date <= $endDate) {
-        //echo "Processing data for: " . $date . "\n";
 
-        // Look for this integration in TakIntegration. We want to get the id
-        $selectIntegration = "
-            SELECT DISTINCT 
-              ti.id AS integrationId
-            FROM 
-              TakIntegration ti,
-              TakPlattform tpFirst,
-              TakPlattform tp,
-              TakServiceComponent comp,
-              TakServiceContract cont,
-              TakLogicalAddress la,
-              MetaPlattformHsaId meta 
-            WHERE 
-                  tp.name = ?          
-              AND tp.environment = ?
-              AND comp.value = ?
-              AND cont.namespace = ?
-              AND la.value = ?
-            
-              AND meta.hsaId LIKE ?
-            
-              AND ti.dateEffective <= ?
-              AND ti.dateEnd >= ?
-              
-              AND tp.id = ti.lastPlattformId
-              AND ti.consumerId = comp.id
-              AND ti.contractId = cont.id        
-              AND ti.logicalAddressId = la.id
-              AND meta.takPlattformId = ti.firstPlattformId
-            ";
-
-        $verb = false;
-        // if ($consumerId == 'SE2321000016-9L05' && $namespace == 'urn:riv:crm:carelisting:GetListingResponder:1') {$verb = true;}
-        $resultIntegration = sqlSelectPrep($selectIntegration, "ssssssss", array(
-            $plattformName,
-            $plattformEnvir,
-            $consumerId,
-            $namespace,
-            $logicalAddressArr[0],
-            $firstPlattformHsaId,
-            $date,
-            $date
-        ), $verb);
-        $numRowsInter = $resultIntegration->num_rows;
-
-        // If we do not find any integrations from the VE part of a combined address we try the VG part (obs, array is reversed above)
-        if ($numRowsInter == 0 && array_key_exists(1, $logicalAddressArr)) {
-            //echo("---- Processing VG part\n");
-            $resultIntegration = sqlSelectPrep($selectIntegration, "ssssssss", array(
-                $plattformName,
-                $plattformEnvir,
-                $consumerId,
-                $namespace,
-                $logicalAddressArr[1],
-                $firstPlattformHsaId,
-                $date,
-                $date
-            ));
-            $numRowsInter = $resultIntegration->num_rows;
-        }
-
-        if ($numRowsInter == 1) {
-            // Check if a record exist for this integration and day.
-            $rowInter = $resultIntegration->fetch_assoc();
-            $integrationId = $rowInter['integrationId'];
-
-            $selectStat = "
+        $selectStat = "
                 SELECT 
                     id AS statisticsId, 
                     basedOnNumberDays,
                     averageResponseTime
                 FROM
-                  StatData 
+                  StatDataTable 
                 WHERE 
-                      integrationId = ?
-                  AND day = ?
+                        date = ?
+                    AND plattformId = ?
+                    AND consumerId = ?
+                    AND logicalAddressId = ?
+                    AND contractId = ?
                 ";
 
-            $resultStat = sqlSelectPrep($selectStat, "is", array($integrationId, $date));
-            $numRowsStat = $resultStat->num_rows;
+        $resultStat = sqlSelectPrep($selectStat, "sssss", array($date, $plattformId, $consumerId, $logicalAddressId, $contractId));
+        $numRowsStat = $resultStat->num_rows;
 
-            if ($numRowsStat == 1) {
-                // Verify basedOnNumberDays to see if the record should be updated
-                $rowStat = $resultStat->fetch_assoc();
-                $statisticsId = $rowStat['statisticsId'];
-                $basedOnNumberDays = $rowStat['basedOnNumberDays'];
-                $responseTimeInDb = $rowStat['averageResponseTime'];
-
-                if ($noOfDays < $basedOnNumberDays) {
-                    // We should update this statistics record if the data in file is based on a smaller number of days than the current record
-                    $updateStat = "
-                        UPDATE StatData
-                        SET 
-                          calls = ?,
-                          basedOnNumberDays = ?
-                        WHERE 
-                          id = ?     
-                    ";
-                    $dummy = sqlUpdatePrep($updateStat, "iii", array($calls, $noOfDays, $statisticsId));
-                }
-
-                if ($averageResponsTime) {
-                    if (($noOfDays < $basedOnNumberDays) OR !$responseTimeInDb) {
-                        $updateStat = "
-                        UPDATE StatData
-                        SET 
-                          averageResponseTime = ?
-                        WHERE 
-                          id = ?     
-                    ";
-                        $dummy = sqlUpdatePrep($updateStat, "iii", array($averageResponsTime, $statisticsId));
-                    }
-                }
-
-            } elseif ($numRowsStat == 0) {
-                //Insert the record
-                $insertStat = "
-                    INSERT INTO StatData
-                      (day, integrationId, calls, averageResponseTime, basedOnNumberDays) 
-                    VALUES (?, ?, ?, ?, ?)
+        if ($numRowsStat == 0) {
+            //Insert the record
+            $insertStat = "
+                    INSERT INTO StatDataTable
+                      (date, 
+                       plattformId, 
+                       firstPlattformId, 
+                       consumerId, 
+                       logicalAddressId, 
+                       contractId,
+                       producerId, 
+                       calls, 
+                       averageResponseTime, 
+                       basedOnNumberDays) 
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ";
 
-                $dummy = sqlInsertPrep($insertStat,
-                    "siiii",
-                    array(
-                        $date,
-                        $integrationId,
-                        $calls,
-                        $averageResponsTime,
-                        $noOfDays
-                    )
-                );
-
-            } else /* $numRowsStat > 1 */ {
-                // Internal error
-                echo "------------------------------------------\n";
-                echo "Internal error in ensureStatistics()\n";
-
+            $dummy = sqlInsertPrep($insertStat,
+                "siiiiiiiii",
+                array(
+                    $date,
+                    $plattformId,
+                    $firstPlattformId,
+                    $consumerId,
+                    $logicalAddressId,
+                    $contractId,
+                    $producerId,
+                    $calls,
+                    $averageResponsTime,
+                    $noOfDays
+                )
+            );
+            if ($dummy == 0) {
+                echo "Could not Insert into StatDataTable, dummy=" . $dummy . "\n";
                 echo 'firstPlattformHsaId: ' . $firstPlattformHsaId . "\n";
-                echo '$plattform: ' . $plattformName . '-' . $plattformEnvir . "\n";
+                echo '$plattform: ' . $plattform . "\n";
                 echo '$consumerId: ' . $consumerId . "\n";
                 echo '$calls: ' . $calls . "\n";
                 echo '$meanRespons ' . $averageResponsTime . "\n";
@@ -995,29 +970,40 @@ function ensureStatistics($firstPlattformHsaId, $plattform, $consumerId, $calls,
                 echo '$logicalAddress: ' . $logicalAddress . "\n";
                 var_dump($logicalAddressArr);
                 echo '$date: ' . $date . "\n";
-                echo "------------------------------------------\n";
+
+            }
+        } else if ($numRowsStat == 1) {
+            // Verify basedOnNumberDays to see if the record should be updated
+            $rowStat = $resultStat->fetch_assoc();
+            $statisticsId = $rowStat['statisticsId'];
+            $basedOnNumberDays = $rowStat['basedOnNumberDays'];
+            $responseTimeInDb = $rowStat['averageResponseTime'];
+
+            if ($noOfDays < $basedOnNumberDays) {
+                // We should update this statistics record if the data in file is based on a smaller number of days than the current record
+                $updateStat = "
+                        UPDATE StatDataTable
+                        SET 
+                          calls = ?,
+                          basedOnNumberDays = ?
+                        WHERE 
+                          id = ?     
+                    ";
+                $dummy = sqlUpdatePrep($updateStat, "iii", array($calls, $noOfDays, $statisticsId));
             }
 
-
-        } else {
-
-            echo "------------------------------------------\n";
-            echo "Expected 1 row in TakIntegration, got: " . $numRowsInter . "\n";
-
-            while ($row = $resultIntegration->fetch_assoc()) {
-                echo 'integrationId: ' . $row['integrationId'] . "\n";
+            if ($averageResponsTime) {
+                if (($noOfDays < $basedOnNumberDays) OR !$responseTimeInDb) {
+                    $updateStat = "
+                        UPDATE StatDataTable
+                        SET 
+                          averageResponseTime = ?
+                        WHERE 
+                          id = ?     
+                    ";
+                    $dummy = sqlUpdatePrep($updateStat, "iii", array($averageResponsTime, $statisticsId));
+                }
             }
-
-            echo 'firstPlattformHsaId: ' . $firstPlattformHsaId . "\n";
-            echo '$plattform: ' . $plattformName . '-' . $plattformEnvir . "\n";
-            echo '$consumerId: ' . $consumerId . "\n";
-            echo '$calls: ' . $calls . "\n";
-            echo '$meanRespons ' . $averageResponsTime . "\n";
-            echo '$namespace: ' . $namespace . "\n";
-            echo '$logicalAddress: ' . $logicalAddress . "\n";
-            var_dump($logicalAddressArr);
-            echo '$date: ' . $date . "\n";
-            echo "------------------------------------------\n";
 
         }
 
@@ -1027,6 +1013,348 @@ function ensureStatistics($firstPlattformHsaId, $plattform, $consumerId, $calls,
     return;
 }
 
+function ensureStatisticsV2PostProcess()
+{
+// Lets start by listing the records where producerId is null
+    echo "\n\n";
+    echo "Post processing \n";
+
+    $select = "
+    SELECT DISTINCT
+           sdt.date as date,
+           sdt.plattformId as plattformId,
+           comp.value as consumer,
+           cont.contractName as contract,
+           la.value as logicalAddress
+    FROM 
+         StatDataTable sdt,
+         TPDB.TakServiceComponent comp,
+         TPDB.TakServiceContract cont,
+         TPDB.TakLogicalAddress la
+    WHERE 
+        sdt.logicalAddressId = la.id
+        AND sdt.contractId = cont.id
+        AND sdt.consumerId = comp.id
+        AND producerId is null
+    ";
+
+    $result = sqlSelectPrep($select, "", array());
+
+    $resultArr = array();
+    echo "Records without producers\n";
+    while ($row = $result->fetch_assoc()) {
+        echo "Producer not found: " .  $row['plattformId'] . " " .  $row['date'] . " " . $row['consumer'] . " " . $row['contract'] . " " . $row['logicalAddress'] . "\n";
+    }
+    // -----------------------------------------------------------------------
+    // Will now update records - if needed
+
+    // -----------------------------------------------------------------------
+    // Will now remove all records without producers
+    $result = sqlSelectPrep($select, "", array());
+
+    $resultArr = array();
+    echo "Remaining records without producers\n";
+    while ($row = $result->fetch_assoc()) {
+        echo "Producer not found: " .  $row['plattformId'] . " " .  $row['date'] . " " . $row['consumer'] . " " . $row['contract'] . " " . $row['logicalAddress'] . "\n";
+    }
+
+
+    $delete = "
+    DELETE FROM StatDataTable
+    WHERE producerId is null
+    ";
+
+    /* todo: Activate
+    $stmt = sqlStmt($delete, "", array());
+    echo "Remaining records without producers has been removed removed\n";
+    */
+}
+
+// This function tries different logical addresses and dates to try to find a producer for this routing
+function searchProducerId($plattformId, $logicalAddressId, $hashLogicalAddressId, $seLogicalAddressId, $contractId, $updateDateBefore, $updateDate, $updateDateAfter)
+{
+
+    // We use the start date to check the TakRouting table. It is a slight simplification, but so far start and end dates are always the same in the input files
+    // But, dateEffective in TakRouting reflects the day AFTER a TAK-change is made and transactions started to flow. Need to decrease the date with one day (one date of TAK-updates)
+    // That date is stored in $updateDateBefore
+    $producerId = getProducerId($plattformId, $logicalAddressId, $contractId, $updateDateBefore);
+    if (!$producerId && $hashLogicalAddressId) {
+        //echo "Will try to use # logical address default to identify producer\n";
+        $producerId = getProducerId($plattformId, $hashLogicalAddressId, $contractId, $updateDateBefore);
+        //echo "----- Tries to set producerId by # ( " . $hashLogicalAddressId . ") \n";
+        if (!$producerId && $seLogicalAddressId) {
+            $producerId = getProducerId($plattformId, $seLogicalAddressId, $contractId, $updateDateBefore);
+            echo "----- Tries to set producerId by SE ( " . $seLogicalAddressId . ") \n";
+        }
+    }
+
+    // If no producer we try by using the startDate - updateDate
+    if ($producerId == null) {
+        $producerId = getProducerId($plattformId, $logicalAddressId, $contractId, $updateDate);
+        if (!$producerId && $hashLogicalAddressId) {
+            //echo "Will try to use # logical address default to identify producer\n";
+            $producerId = getProducerId($plattformId, $hashLogicalAddressId, $contractId, $updateDate);
+            //echo "----- Tries to set producerId by # ( " . $hashLogicalAddressId . ") \n";
+            if (!$producerId && $seLogicalAddressId) {
+                $producerId = getProducerId($plattformId, $seLogicalAddressId, $contractId, $updateDate);
+                echo "----- Tries to set producerId by SE ( " . $seLogicalAddressId . ") \n";
+            }
+        }
+    }
+
+    // Finally we try the next date - uodateDateAfter
+    if ($producerId == null) {
+        $producerId = getProducerId($plattformId, $logicalAddressId, $contractId, $updateDateAfter);
+        if (!$producerId && $hashLogicalAddressId) {
+            //echo "Will try to use # logical address default to identify producer\n";
+            $producerId = getProducerId($plattformId, $hashLogicalAddressId, $contractId, $updateDateAfter);
+            //echo "----- Tries to set producerId by # ( " . $hashLogicalAddressId . ") \n";
+            if (!$producerId && $seLogicalAddressId) {
+                $producerId = getProducerId($plattformId, $seLogicalAddressId, $contractId, $updateDateAfter);
+                echo "----- Tries to set producerId by SE ( " . $seLogicalAddressId . ") \n";
+            }
+        }
+    }
+
+    // IF we still have not found a producer, the last try is to see if there ever has been one, and only one,
+    // TAK configuration for a producer. Then that will be used. It assumes the TAK history is wrong (which has happend)
+    if (!$producerId) {
+        $producerId = getProducerIdSingleAnyDate($plattformId, $logicalAddressId, $contractId);
+        if (!$producerId) {
+            $producerId = getProducerIdSingleAnyDate($plattformId, $hashLogicalAddressId, $contractId);
+            if (!$producerId) {
+                $producerId = getProducerIdSingleAnyDate($plattformId, $seLogicalAddressId, $contractId);
+            }
+        }
+    }
+
+    return $producerId;
+}
+
+// This function needs to identify local and remote (downstream) producers
+function getProducerId($currentPlattformId, $logicalAddressId, $contractId, $date, $depth = 0)
+{
+
+    if ($depth > 3) {
+        //echo "ERROR in getProducerHsa(), depth > 3, LA=" . $logicalAddress . ", NS=" . $namespace . "\n";
+        return null;
+    }
+
+    // First step is to find all producers for this LA och TK (routes)
+    $select = "
+        SELECT 
+             serviceComponentId AS producerId,
+             plattformId AS 'producerPlattformId'
+        FROM
+             TakRouting rout
+        WHERE
+                rout.logicalAddressId = ?
+            AND rout.serviceContractId = ?
+            AND rout.dateEffective <= ? 
+            AND rout.dateEnd >= ?
+    ";
+
+    $result = sqlSelectPrep($select, "iiss", array($logicalAddressId, $contractId, $date, $date));
+
+    $producerArr = array();
+    while ($row = $result->fetch_assoc()) {
+        $producerArr[$row['producerPlattformId']] = $row['producerId'];
+    }
+
+    if (!array_key_exists($currentPlattformId, $producerArr)) {
+        return null;
+    }
+
+    $producerId = $producerArr[$currentPlattformId];
+    if (!$producerId) {
+        return null;
+    }
+
+    $nextTpId = getPlattformComponent($producerId);
+
+    if ($nextTpId) {
+        $nextProducerId = getProducerId($nextTpId, $logicalAddressId, $contractId, $date, $depth + 1);
+        if ($nextProducerId) {
+            return $nextProducerId;
+        } else {
+            return $producerId;
+        }
+    } else {
+        return $producerId;
+    }
+}
+
+function getProducerIdSingleAnyDate($currentPlattformId, $logicalAddressId, $contractId)
+{
+
+    // DISTINCT is important since the same producer might be added and removed over time
+    $select = "
+        SELECT DISTINCT 
+             serviceComponentId AS producerId
+        FROM
+             TakRouting rout
+        WHERE
+                rout.logicalAddressId = ?
+            AND rout.serviceContractId = ?
+            AND rout.plattformId = ?
+    ";
+
+    $result = sqlSelectPrep($select, "iii", array($logicalAddressId, $contractId, $currentPlattformId));
+    $numRows = $result->num_rows;
+
+    if ($numRows == 1) {
+        $row = $result->fetch_assoc();
+        echo "=========== Found producerId through getProducerIdSingleAnyDate(): " . $row['producerId'] . "\n";
+        return $row['producerId'];
+    }
+    return null;
+}
+
+function getProducerHsa($currentPlattform, $logicalAddress, $namespace, $depth = 0)
+{
+
+    if ($depth > 3) {
+        //echo "ERROR in getProducerHsa(), depth > 3, LA=" . $logicalAddress . ", NS=" . $namespace . "\n";
+        return null;
+    }
+
+    // First step is to find all producers for this LA och TK (routes)
+    $select = "
+        SELECT 
+             comp.value AS producerHsa,
+             CONCAT(tp.name, '-', tp.environment) AS 'producerTp'
+        FROM
+             TakServiceComponent comp,
+             TakLogicalAddress la,
+             TakServiceContract tk,
+             TakRouting rout,
+             TakPlattform tp
+        WHERE
+                la.value = ?
+            AND tk.namespace = ?
+            AND rout.plattformId = tp.id
+            AND rout.serviceComponentId = comp.id
+            AND rout.logicalAddressId = la.id
+            AND rout.serviceContractId = tk.id
+    ";
+
+    $result = sqlSelectPrep($select, "ss", array($logicalAddress, $namespace));
+
+    $producerHsaArr = array();
+    $producerTpNameArr = array();
+    while ($row = $result->fetch_assoc()) {
+        $producerHsaArr[$row['producerTp']] = $row['producerHsa'];
+    }
+
+
+    if (!array_key_exists($currentPlattform, $producerHsaArr)) {
+        return null;
+    }
+    $producerHsa = $producerHsaArr[$currentPlattform];
+    if (!$producerHsa) {
+        return null;
+    }
+
+    $nextTp = getPlattformName($producerHsa);
+
+    if ($nextTp) {
+        $nextProducerHsa = getProducerHsa($nextTp, $logicalAddress, $namespace, $depth + 1);
+        if ($nextProducerHsa) {
+            return $nextProducerHsa;
+        } else {
+            return $producerHsa;
+        }
+    } else {
+        return $producerHsa;
+    }
+}
+
+// This function returns a plattformId if a componentId represents a plattform, otherwise null is returned
+function getPlattformComponent($componentId)
+{
+
+    if ($componentId == null) {
+        return null;
+    }
+
+    $select = "
+        SELECT 
+            mp.takPlattformId AS plattformId
+        FROM
+            MetaPlattformHsaId mp,
+            TakServiceComponent comp
+        WHERE
+                comp.id = ?
+            AND comp.value = mp.hsaId
+    ";
+
+    $result = sqlSelectPrep($select, "i", array($componentId));
+    $numRows = $result->num_rows;
+
+    if ($numRows != 1) {
+        //echo "No plattform name found in getPlattformMane() for hsaid=" . $tpHsaId . "\n";
+        return null;
+    }
+
+    return $result->fetch_assoc()["plattformId"];
+
+}
+
+function getPlattformName($tpHsaId)
+{
+
+    if ($tpHsaId == null) {
+        return null;
+    }
+
+    $select = "
+        SELECT CONCAT(tp.name, '-', tp.environment) AS 'name'
+        FROM
+            TakPlattform tp,
+            MetaPlattformHsaId mp
+        WHERE
+                mp.takPlattformId = tp.id
+            AND mp.hsaId = ?
+    ";
+
+    $result = sqlSelectPrep($select, "s", array($tpHsaId));
+    $numRows = $result->num_rows;
+
+    if ($numRows != 1) {
+        //echo "No plattform name found in getPlattformMane() for hsaid=" . $tpHsaId . "\n";
+        return null;
+    }
+
+    return $result->fetch_assoc()["name"];
+
+}
+
+function getPlattformId($plattform)
+{
+    $plattformName = strtok($plattform, "-");
+    $plattformEnvir = strtok("-");
+
+    $select = "
+      SELECT DISTINCT 
+        id 
+      FROM  
+        TakPlattform 
+      WHERE 
+            name = ? 
+        AND environment = ?
+      ORDER BY id 
+       ";
+
+    $result = sqlSelectPrep($select, "ss", array($plattformName, $plattformEnvir));
+
+    if ($result->num_rows == 0) {
+        return null;
+    }
+
+    $row = $result->fetch_assoc();
+    return $row['id'];
+
+}
 
 function getLastSnapshotTimeInDb($plattform, $environment)
 {
@@ -1067,7 +1395,28 @@ function getLastSnapshotTimeInIntegrations()
     }
 }
 
+function getTakRecordId($table, $selectId, $field, $value)
+{
 
+    $select = "
+      SELECT DISTINCT 
+        " . $selectId . " 
+      FROM  
+        " . $table . "  
+      WHERE 
+        " . $field . " = ?
+      ORDER BY id 
+       ";
+
+    $result = sqlSelectPrep($select, "s", array($value));
+
+    if ($result->num_rows == 0) {
+        return null;
+    }
+
+    $row = $result->fetch_assoc();
+    return $row[$selectId];
+}
 
 function getValue($arr, $key)
 {
@@ -1089,9 +1438,9 @@ function emptyDatabase($scope)
 
     if ($scope === "StatData" || $scope === "ALL") {
 
-        $sql[$i] = "DELETE FROM StatData WHERE id <> 0";
+        $sql[$i] = "DELETE FROM StatDataTable WHERE id <> 0";
         $i++;
-        $sql[$i] = "ALTER TABLE StatData AUTO_INCREMENT = 1";
+        $sql[$i] = "ALTER TABLE StatDataTable AUTO_INCREMENT = 1";
         $i++;
 
     }
@@ -1102,12 +1451,12 @@ function emptyDatabase($scope)
         $i++;
         $sql[$i] = "ALTER TABLE TakIntegration AUTO_INCREMENT = 1";
         $i++;
-/*
-        $sql[$i] = "DELETE FROM TakUrl WHERE id <> 0";
-        $i++;
-        $sql[$i] = "ALTER TABLE TakUrl AUTO_INCREMENT = 1";
-        $i++;
-*/
+        /*
+                $sql[$i] = "DELETE FROM TakUrl WHERE id <> 0";
+                $i++;
+                $sql[$i] = "ALTER TABLE TakUrl AUTO_INCREMENT = 1";
+                $i++;
+        */
         $sql[$i] = "DELETE FROM TakRivtaProfile WHERE id <> 0";
         $i++;
         $sql[$i] = "ALTER TABLE TakRivtaProfile AUTO_INCREMENT = 1";
@@ -1310,6 +1659,54 @@ function dateInc($date)
     return $date1->format('Y-m-d');
 }
 
+function getRoutingUpdateDates()
+{
+    $select = " 
+        SELECT DISTINCT 
+          dateEffective AS date
+        FROM
+          TPDB.TakRouting 
+        
+        UNION DISTINCT 
+        SELECT DISTINCT 
+          dateEnd AS date
+        FROM
+          TPDB.TakRouting
+          
+        ORDER BY date DESC  
+        ";
+
+    $result = sqlSelectPrep($select, "", array());
+
+    $dateArr = array();
+    while ($row = $result->fetch_assoc()) {
+        $dateArr[] = $row['date'];
+    }
+
+    return $dateArr;
+}
+
+function getUpdateDateBefore($routingDates, $serachDate)
+{
+    foreach ($routingDates as $value) {
+        if ($value < $serachDate) {
+            return $value;
+        }
+    }
+    return $serachDate;
+}
+
+function getUpdateDateAfter($routingDates, $serachDate)
+{
+    $rDates = array_reverse($routingDates);
+    foreach ($rDates as $value) {
+        if ($value > $serachDate) {
+            return $value;
+        }
+    }
+    return $serachDate;
+}
+
 function csv_to_array($filename = '', $delimiter = ';')
 {
     if (!file_exists($filename) || !is_readable($filename))
@@ -1333,6 +1730,97 @@ function csv_to_array($filename = '', $delimiter = ';')
         fclose($handle);
     }
     return $data;
+}
+
+function upgrade_62_to_64()
+{
+
+    // Perform only if table MetaSource does not exist
+
+    $dbname = leoGetenv('DBNAME');
+    $VERSION = "6.4";
+    $DEPLOY_DATE = "2019-06-01";
+
+    $select = "
+    SELECT * 
+    FROM information_schema.tables
+    WHERE table_schema = '" . $dbname . "'  
+    AND table_name = 'StatDataTable'
+    LIMIT 1";
+
+    $result = sqlSelectPrep($select, "", array());
+    $numRows = $result->num_rows;
+
+    if ($numRows > 0) {
+        echo "StatDataTable does exist - upgrade already done\n";
+        return;
+    }
+
+    echo "StatDataTable does NOT exist - will upgrade DB\n";
+
+    $create = "
+    create table StatDataTable
+(
+    id                  mediumint auto_increment
+        primary key,
+    date                date      not null,
+    plattformId         mediumint not null,
+    firstPlattformId    mediumint null,
+    consumerId          mediumint not null,
+    logicalAddressId    mediumint not null,
+    contractId          mediumint not null,
+    producerId          mediumint null,
+    calls               mediumint not null,
+    averageResponseTime mediumint null,
+    basedOnNumberDays   mediumint not null,
+    constraint StatDataTable_TakLogicalAddress_id_fk
+        foreign key (logicalAddressId) references TakLogicalAddress (id),
+    constraint StatDataTable_TakPlattform_id_fk
+        foreign key (firstPlattformId) references TakPlattform (id),
+    constraint StatDataTable_TakPlattform_id_fk_2
+        foreign key (plattformId) references TakPlattform (id),
+    constraint StatDataTable_TakServiceComponent_id_fk
+        foreign key (consumerId) references TakServiceComponent (id),
+    constraint StatDataTable_TakServiceComponent_id_fk_2
+        foreign key (producerId) references TakServiceComponent (id),
+    constraint StatDataTable_TakServiceContract_id_fk
+        foreign key (contractId) references TakServiceContract (id)
+)
+	comment 'The new statistics data table'
+    ";
+
+    $index1 = "create index StatDataTable_index on StatDataTable (date, plattformId, consumerId, logicalAddressId, contractId)";
+    $index2 = "create index StatDataTable_date_index on StatDataTable (date)";
+
+
+    sqlStatementWithPrep($create, "", array());
+    sqlStatementWithPrep($index1, "", array());
+    sqlStatementWithPrep($index2, "", array());
+
+    // Update version
+    $updateStat = "
+                        UPDATE TPDB.MetaVersion
+                        SET 
+                          version = ?,
+                          deployDate = ?
+                    ";
+    $dummy = sqlUpdatePrep($updateStat, "ss", array($VERSION, $DEPLOY_DATE));
+
+    // Clear out LAs added by log load
+    $delete = "
+    DELETE FROM TakLogicalAddress
+    WHERE description LIKE '***%'
+    ";
+    $dummy = sqlStmt($delete, "", array());
+
+    // Clear out components added by log load
+    $delete = "
+    DELETE FROM TakServiceComponent
+    WHERE description LIKE '***%'
+    ";
+    $dummy = sqlStmt($delete, "", array());
+
+    return;
 }
 
 ?>
