@@ -104,13 +104,23 @@ switch ($TYPE) {
         echo json_encode($answerArr);
         break;
 
+    case "statistics":
+        $answerArr = getStatisticsArray($queryArr);
+        echo json_encode($answerArr);
+        break;
+
+    case "history":
+        $answerArr = getHistoryArrayV2($queryArr);
+        echo json_encode($answerArr);
+        break;
+
     case "currentItems":
         $answerArr = getCurrentItemsArray($queryArr);
         echo json_encode($answerArr);
         break;
 
     case "version":
-        echo '[{"version": "' . $VERSION . '" , "deployDate" : "' .  $DEPLOYDATE . '"}]';
+        echo '[{"version": "' . $VERSION . '" , "deployDate" : "' . $DEPLOYDATE . '"}]';
         break;
 
     /*
@@ -208,12 +218,12 @@ function getDateArray()
 
     // Then get an array of dates when there exist statistic information
 
-    $select = "SELECT DISTINCT day FROM StatData ORDER BY day";
+    $select = "SELECT DISTINCT date FROM StatDataTable ORDER BY date";
     $result = sqlSelectPrep($select, "", array());
 
     $statDateArr = array();
     while ($row = $result->fetch_assoc()) {
-        $statDateArr[] = $row['day'];
+        $statDateArr[] = $row['date'];
     }
 
     $answerArr['integrations'] = $dateArr;
@@ -621,7 +631,7 @@ function getIntegrationArray($queryArr)
 
 function getStatPlattformArray()
 {
-
+    /*
     $select = "
     SELECT DISTINCT
       ti . lastPlattformId,
@@ -635,21 +645,212 @@ function getStatPlattformArray()
           sd . integrationId = ti . id
           AND ti . lastPlattformId = tp . id
     ";
+    */
+    $select = "
+    SELECT DISTINCT
+      sdt.plattformId AS PlattformId,
+      tp.name AS TpName,
+      tp.environment AS TpEnvironment
+    FROM
+      TakPlattform tp,
+      StatDataTable sdt
+    WHERE
+     sdt.plattformId = tp.id    
+    ";
 
     $result = sqlSelectPrep($select, "", array());
 
     $resultArr = array();
     while ($row = $result->fetch_assoc()) {
         $recordArr = array(
-            "id" => $row['lastPlattformId'],
-            "platform" => $row['name'],
-            "environment" => $row['environment']
+            "id" => $row['PlattformId'],
+            "platform" => $row['TpName'],
+            "environment" => $row['TpEnvironment']
         );
         $resultArr[] = $recordArr;
     }
 
     return $resultArr;
 }
+
+// The new statistics function to fetch data from StatDataTable
+function getStatisticsArray($queryArr)
+{
+
+    $paramsArr = mkWhereClauseFromParamsForStatistics($queryArr);
+    if ($paramsArr == null) {
+        return null;
+    }
+    $dateEffective = $paramsArr[0];
+    $dateEnd = $paramsArr[1];
+    $whereClauseIntegrations = $paramsArr[2];
+    $typeStringIntegrations = $paramsArr[3];
+    $paramArrayIntegrations = $paramsArr[4];
+
+    /*
+    if (! isset($queryArr['dateEffective'])) {
+        echo "*** Error, mandatory parameter dateEffective not specified!";
+        return null;
+    }
+    if (! isset($queryArr['dateEnd'])) {
+        echo "*** Error, mandatory parameter dateEnd not specified!";
+        return null;
+    }
+
+    // The call might refer to lastPlattformId instead of plattformId
+    if (isset($queryArr['lastPlattformId'])) {
+        $queryArr['plattform=Id'] = $queryArr['lastPlattformId'];
+        unset($queryArr['lastPlattformId']);
+    }
+
+    // Build a WHERE clause based on the filter parameters
+    $typeStringIntegrations = '';
+    $paramArrayIntegrations = array();
+    $whereClauseIntegrations = 'WHERE TRUE '; // This way we know there can always be a WHERE clause
+
+
+    $legalParams = array(
+        'lastPlattformId',
+        'contractId',
+        'domainId',
+        'logicalAddressId',
+        'consumerId',
+        'producerId'
+    );
+
+    foreach ($legalParams as $param) {
+        if (isset($queryArr[$param])) {
+            $idString = $queryArr[$param];
+            list($whereClauseDelta, $typeStringDelta, $idArrDelta) = mkWhereClause($param, $idString);
+
+            foreach ($idArrDelta as $idValue) {
+                $paramArrayIntegrations[] = $idValue;
+            }
+            $typeStringIntegrations .= $typeStringDelta;
+
+            if (strlen($whereClauseIntegrations) > 7) {
+                $whereClauseIntegrations .= ' AND ';
+            }
+            $whereClauseIntegrations .= $whereClauseDelta;
+        }
+    }
+
+    // Now we add the two date parameters
+    $dateEffective = null;
+    if (strlen($whereClauseIntegrations) > 7) {
+        $whereClauseIntegrations .= ' AND ';
+    }
+    $whereClauseIntegrations .= ' date >= ?';
+    $dateEffective = $queryArr['dateEffective'];
+    $typeStringIntegrations .= 's';
+    $paramArrayIntegrations[] = $dateEffective;
+
+    if (strlen($whereClauseIntegrations) > 7) {
+        $whereClauseIntegrations .= ' AND ';
+    }
+    $whereClauseIntegrations .= 'date <= ?';
+    $dateEnd = $queryArr['dateEnd'];
+    $typeStringIntegrations .= 's';
+    $paramArrayIntegrations[] = $dateEnd;
+    */
+
+// todo: Will need to change calc of average. Need to sum respons time over all calls and then divide with sum of num calls
+    $select = "
+SELECT
+    plattformId,
+    consumerId,
+    logicalAddressId,
+    contractId,
+    cont.serviceDomainId AS domainId,  
+    producerId,
+    SUM(calls) AS numberOfCalls,
+    AVG(averageResponseTime) DIV 1 AS averageResponseTime
+FROM
+    StatDataTable sdt,
+    TakServiceContract cont
+ " . $whereClauseIntegrations . "
+    AND sdt.contractId = cont.id 
+    AND sdt.producerId IS NOT NULL
+GROUP BY
+    plattformId,
+    consumerId,
+    logicalAddressId,
+    contractId,
+    producerId
+    ";
+
+    //$selectStat = $selectStat1 . $selectIntegrations1 . $selectIntegrations3 . $whereClauseIntegrations . $selectStat2;
+
+    $result = sqlSelectPrep(
+        $select,
+        $typeStringIntegrations,
+        $paramArrayIntegrations
+    );
+
+    $resultArr = array();
+
+    while ($row = $result->fetch_assoc()) {
+        $recordArr = array(
+            $row["plattformId"],   // 0
+            $row["logicalAddressId"],   // 1
+            $row["contractId"],         // 2
+            $row["domainId"],           // 3
+            $row["consumerId"],         // 4
+            $row["producerId"],         // 5
+            (int)$row["numberOfCalls"], // 6
+            (int)$row["averageResponseTime"] // 7
+        );
+        $resultArr[] = $recordArr;
+    }
+    return $resultArr;
+}
+
+// The history array it used to show the "Visa utveckling över tid" in statistics
+function getHistoryArrayV2($queryArr)
+{
+
+    $paramsArr = mkWhereClauseFromParamsForStatistics($queryArr);
+    if ($paramsArr == null) {
+        return null;
+    }
+    $dateEffective = $paramsArr[0];
+    $dateEnd = $paramsArr[1];
+    $whereClauseIntegrations = $paramsArr[2];
+    $typeStringIntegrations = $paramsArr[3];
+    $paramArrayIntegrations = $paramsArr[4];
+
+    $select= "
+        SELECT
+          date,
+          SUM(calls) AS numberOfCalls,
+          AVG(averageResponseTime) DIV 1 AS averageResponseTime
+    FROM
+        StatDataTable sdt,
+        TakServiceContract cont
+        " . $whereClauseIntegrations . "
+        AND sdt.contractId = cont.id 
+        AND sdt.producerId IS NOT NULL
+      GROUP BY date
+      ";
+
+    $result = sqlSelectPrep(
+        $select,
+        $typeStringIntegrations,
+        $paramArrayIntegrations
+    );
+
+    //$numRows = $result->num_rows;
+
+    //$resultArr = array();
+
+    while ($row = $result->fetch_assoc()) {
+        $resultArr[$row["date"]] = (int)$row["numberOfCalls"];
+    }
+
+    $answerArr['history'] = $resultArr;
+    return $answerArr;
+}
+
 
 function getStatistics($dateEffective,
                        $dateEnd,
@@ -890,21 +1091,77 @@ function mkWhereClauseFromParams($queryArr)
     $typeStringIntegrations .= 's';
     $paramArrayIntegrations[] = $dateEnd;
 
-    //$whereClauseIntegrations .= ' dateEnd >= ?';
-
-    /*
-    echo "queryArr = \n";
-    var_dump($queryArr);
-    echo "dateEffective = " . $dateEffective . "\n";
-    echo "dateEnd = " . $dateEnd . "\n";
-    echo "whereClauseIntegrations = " . $whereClauseIntegrations . "\n";
-    echo "whereClauseIntegrationsWithoutDate = " . $whereClauseIntegrationsWithoutDates . "\n";
-    echo "paramArrayIntegrations = \n";
-    var_dump($paramArrayIntegrations);
-    */
-
     return array($dateEffective, $dateEnd, $whereClauseIntegrations, $typeStringIntegrations, $paramArrayIntegrations, $include,
         $whereClauseIntegrationsWithoutDates, $paramArrayIntegrationsWithoutDates, $typeStringIntegrationsWithoutDates);
+}
+
+function mkWhereClauseFromParamsForStatistics($queryArr) {
+
+    if (! isset($queryArr['dateEffective'])) {
+        echo "*** Error, mandatory parameter dateEffective not specified!";
+        return null;
+    }
+    if (! isset($queryArr['dateEnd'])) {
+        echo "*** Error, mandatory parameter dateEnd not specified!";
+        return null;
+    }
+
+    // The call might refer to lastPlattformId instead of plattformId
+    if (isset($queryArr['lastPlattformId'])) {
+        $queryArr['plattformId'] = $queryArr['lastPlattformId'];
+        unset($queryArr['lastPlattformId']);
+    }
+
+    // Build a WHERE clause based on the filter parameters
+    $typeStringIntegrations = '';
+    $paramArrayIntegrations = array();
+    $whereClauseIntegrations = 'WHERE TRUE '; // This way we know there can always be a WHERE clause
+
+    $legalParams = array(
+        'plattformId',
+        'contractId',
+        'domainId',
+        'logicalAddressId',
+        'consumerId',
+        'producerId'
+    );
+
+    foreach ($legalParams as $param) {
+        if (isset($queryArr[$param])) {
+            $idString = $queryArr[$param];
+            list($whereClauseDelta, $typeStringDelta, $idArrDelta) = mkWhereClause($param, $idString);
+
+            foreach ($idArrDelta as $idValue) {
+                $paramArrayIntegrations[] = $idValue;
+            }
+            $typeStringIntegrations .= $typeStringDelta;
+
+            if (strlen($whereClauseIntegrations) > 7) {
+                $whereClauseIntegrations .= ' AND ';
+            }
+            $whereClauseIntegrations .= $whereClauseDelta;
+        }
+    }
+
+    // Now we add the two date parameters
+    $dateEffective = null;
+    if (strlen($whereClauseIntegrations) > 7) {
+        $whereClauseIntegrations .= ' AND ';
+    }
+    $whereClauseIntegrations .= ' date >= ?';
+    $dateEffective = $queryArr['dateEffective'];
+    $typeStringIntegrations .= 's';
+    $paramArrayIntegrations[] = $dateEffective;
+
+    if (strlen($whereClauseIntegrations) > 7) {
+        $whereClauseIntegrations .= ' AND ';
+    }
+    $whereClauseIntegrations .= 'date <= ?';
+    $dateEnd = $queryArr['dateEnd'];
+    $typeStringIntegrations .= 's';
+    $paramArrayIntegrations[] = $dateEnd;
+
+    return array($dateEffective, $dateEnd, $whereClauseIntegrations, $typeStringIntegrations, $paramArrayIntegrations);
 }
 
 function incDate($inDate)
