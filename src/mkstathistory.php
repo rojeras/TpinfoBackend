@@ -19,6 +19,7 @@ ini_set('memory_limit', '1024M');
 
 // Report all errors
 error_reporting(E_ALL);
+ini_set('max_execution_time', 600);
 
 require 'leolib_sql.php';
 require_once 'leolib.php';
