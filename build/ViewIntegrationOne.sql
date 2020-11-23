@@ -3,8 +3,6 @@ CREATE VIEW ViewIntegrationOne AS
 SELECT DISTINCT auth.plattformId                                    AS firstPlattformId,
                 NULL                                                AS middlePlattformId,
                 auth.plattformId                                    AS lastPlattformId,
-
-                -- auth.logicalAddressId      AS logicalAddressId,
                 routing.logicalAddressId                            AS logicalAddressId,
 
                 auth.serviceContractId                              AS contractId,
@@ -18,14 +16,10 @@ FROM TakCallAuthorization auth,
      TakRouting routing,
      TakServiceContract contract
 WHERE auth.plattformId = routing.plattformId
-
   AND auth.logicalAddressId = routing.logicalAddressId -- The default case, where both LA are the same
-
   AND auth.serviceContractId = routing.serviceContractId
   AND auth.serviceContractId = contract.id
-  -- AND auth.dateEffective < routing.dateEnd
   AND auth.dateEffective <= routing.dateEnd
-  -- AND auth.dateEnd > routing.dateEffective
   AND auth.dateEnd >= routing.dateEffective
 
 UNION
@@ -34,8 +28,6 @@ UNION
 SELECT DISTINCT auth.plattformId                                    AS firstPlattformId,
                 NULL                                                AS middlePlattformId,
                 auth.plattformId                                    AS lastPlattformId,
-
-                -- auth.logicalAddressId      AS logicalAddressId,
                 routing.logicalAddressId                            AS logicalAddressId,
 
                 auth.serviceContractId                              AS contractId,
@@ -49,14 +41,10 @@ FROM TakCallAuthorization auth,
      TakRouting routing,
      TakServiceContract contract
 WHERE auth.plattformId = routing.plattformId
-
   AND auth.logicalAddressId <> routing.logicalAddressId -- The case where both addresses are 'SE' is managed in the first SELECT
   AND auth.logicalAddressId IN (SELECT DISTINCT id FROM TakLogicalAddress WHERE value = 'SE' OR value = '*')
-
   AND auth.serviceContractId = routing.serviceContractId
   AND auth.serviceContractId = contract.id
-  -- AND auth.dateEffective < routing.dateEnd
   AND auth.dateEffective <= routing.dateEnd
-  -- AND auth.dateEnd > routing.dateEffective
   AND auth.dateEnd >= routing.dateEffective
 ;

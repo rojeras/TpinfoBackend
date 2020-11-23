@@ -32,6 +32,7 @@ $serverName = $_SERVER['SERVER_NAME'];
 $DBCONN = sqlConnectEnvs();
 
 header('Access-Control-Allow-Origin: *');
+header("Content-type:application/json");
 $scriptName = basename(__FILE__, 'tpdbapi.php');
 
 if (isset($_SERVER['QUERY_STRING'])) {
