@@ -21,13 +21,13 @@ ini_set('max_execution_time', 2000);
 // Report all errors
 error_reporting(E_ALL);
 // done: Add transactions and commit/rollback for each TAK per day
-// A small change to trigger a rebuild
 // todo: Create a mechanism where the program notifies if it encounters problems (mail?)
 
 // This pgm update the tpdb cf today
 // Intended to be run by cron
 
 //require $_SERVER['DOCUMENT_ROOT'].'/scripts/leolib_sql.php';
+
 require 'leolib_sql.php';
 require_once 'leolib.php';
 
@@ -45,18 +45,20 @@ $DBCONN = sqlConnectEnvs();
 
 echo "Start! \n";
 
-
-echo("Check if DB updated\n");
-upgrade_62_to_64();
-
+// echo("Check if DB updated\n");
+// upgrade_62_to_64();
 
 echo("Load TAK data\n");
 // emptyDatabase("ALL"); !!!
 loadTakData();
 
-
 // emptyDatabase("StatData");
 loadStatistics($STATFILESPATH);  //!!!!
+
+$DBCONN->close();
+
+echo("Clean cache\n");
+cleanCache();
 
 echo 'Klart!';
 echo '';
@@ -66,7 +68,7 @@ return; // End of main program
 
 function loadTakData()
 {
-    GLOBAL $DBCONN;
+    global $DBCONN;
 
     $apiConnectionPointsJSON = getConnectionPoints();
     for ($i = 0; $i < count($apiConnectionPointsJSON); $i++) {
@@ -105,7 +107,7 @@ function loadTakData()
         */
 
         // Exclude first days of 2017 due to an error in the naming of the files
-        if ('2017-01-01' <= $timeStamp AND $timeStamp <= '2017-01-08') {
+        if ('2017-01-01' <= $timeStamp and $timeStamp <= '2017-01-08') {
             continue;
         }
 
@@ -155,7 +157,7 @@ function loadStatistics($statFiles)
     // Needed when we analyze TakRouting to find the producer for a certain log record
     $routingDates = getRoutingUpdateDates();
 
-    GLOBAL $DBCONN;
+    global $DBCONN;
 
     $DBCONN->begin_transaction();
 
@@ -194,7 +196,7 @@ function loadStatistics($statFiles)
             $consumerId = $item["consumerId"];
 
             // In old ELK null is used to indicate local consumer, in new ELK originalConsumer is set equal to consumer
-            if ($originalConsumerId != "null" AND $originalConsumerId != $consumerId) {
+            if ($originalConsumerId != "null" and $originalConsumerId != $consumerId) {
                 $firstPlattformHsaId = $item["consumerId"];
                 $consumerId = $originalConsumerId;
             }
@@ -226,6 +228,45 @@ function loadStatistics($statFiles)
     $DBCONN->commit();
 }
 
+function cleanCache()
+{
+    $cache_path = 'cache/';
+
+    // Delete the base item files - must be updated each day
+    array_map('unlink', glob($cache_path . "*.statPlattforms.cache"));
+    array_map('unlink', glob($cache_path . "*.plattforms.cache"));
+    array_map('unlink', glob($cache_path . "*.plattformChains.cache"));
+    array_map('unlink', glob($cache_path . "*.logicalAddress.cache"));
+    array_map('unlink', glob($cache_path . "*.domains.cache"));
+    array_map('unlink', glob($cache_path . "*.dates.cache"));
+    array_map('unlink', glob($cache_path . "*.contracts.cache"));
+    array_map('unlink', glob($cache_path . "*.components.cache"));
+
+    $secondsInWeek = 604800;
+    $secondsInWeek = 10;
+    $secondsIn15Weeks = $secondsInWeek * 15;
+    $secondsInYear = $secondsInWeek * 52;
+
+    // integration files are removed after a week
+    cleanCacheBasedOnFileType($cache_path, "integrations", $secondsInWeek);
+
+    // statistics files are quite small and kept 15 weeks
+    cleanCacheBasedOnFileType($cache_path,"statistics", $secondsIn15Weeks);
+
+    // history files are very small and kept a year
+    cleanCacheBasedOnFileType($cache_path, "history", $secondsInYear);
+}
+
+function cleanCacheBasedOnFileType($cache_path, $fileType, $acceptedAge) {
+
+    foreach (glob($cache_path . "*." . $fileType . ".cache") as $file) {
+        $fileAge = time() - filemTime($file);
+        if ($fileAge > $acceptedAge) {
+            echo "Cache file will be deleted: " . $file . " age: " . $fileAge . " seconds\n";
+            unlink($file);
+        }
+    }
+}
 
 // Ensure a certain plattform, identified by name and environment, exists in the Plattform table
 function ensurePlattform($name, $environment, $timeStamp)
@@ -841,7 +882,6 @@ function ensureRivtaProfile($routingId, $rivtaProfile, $timeStamp, $lastSnapshot
 }
 
 
-
 function ensureStatisticsV2($firstPlattformHsaId, $plattform, $consumerHsa, $calls, $averageResponsTime, $namespace, $logicalAddressString, $startDate, $endDate, $updateDateBefore, $updateDateAfter)
 {
     /*
@@ -854,7 +894,7 @@ function ensureStatisticsV2($firstPlattformHsaId, $plattform, $consumerHsa, $cal
  */
 
     if ($consumerHsa == '${httpHeaderHsaId' ||
-        $consumerHsa == '444' ) {
+        $consumerHsa == '444') {
         return;
     }
 
@@ -993,7 +1033,7 @@ sed 's/echo/echo\n/g' FILE | grep -c "echo"
             }
 
             if ($averageResponsTime) {
-                if (($noOfDays < $basedOnNumberDays) OR !$responseTimeInDb) {
+                if (($noOfDays < $basedOnNumberDays) or !$responseTimeInDb) {
                     $updateStat = "
                         UPDATE StatDataTable
                         SET 
@@ -1043,7 +1083,7 @@ function ensureStatisticsV2PostProcess()
     $resultArr = array();
     echo "Records without producers\n";
     while ($row = $result->fetch_assoc()) {
-        echo "Producer not found: " .  $row['plattformId'] . " " .  $row['date'] . " " . $row['consumer'] . " " . $row['contract'] . " " . $row['logicalAddress'] . "\n";
+        echo "Producer not found: " . $row['plattformId'] . " " . $row['date'] . " " . $row['consumer'] . " " . $row['contract'] . " " . $row['logicalAddress'] . "\n";
     }
     // -----------------------------------------------------------------------
     // Will now update records - if needed
@@ -1055,7 +1095,7 @@ function ensureStatisticsV2PostProcess()
     $resultArr = array();
     echo "Remaining records without producers\n";
     while ($row = $result->fetch_assoc()) {
-        echo "Producer not found: " .  $row['plattformId'] . " " .  $row['date'] . " " . $row['consumer'] . " " . $row['contract'] . " " . $row['logicalAddress'] . "\n";
+        echo "Producer not found: " . $row['plattformId'] . " " . $row['date'] . " " . $row['consumer'] . " " . $row['contract'] . " " . $row['logicalAddress'] . "\n";
     }
 
 
