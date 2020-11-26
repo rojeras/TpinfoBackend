@@ -243,7 +243,6 @@ function cleanCache()
     array_map('unlink', glob($cache_path . "*.components.cache"));
 
     $secondsInWeek = 604800;
-    $secondsInWeek = 10;
     $secondsIn15Weeks = $secondsInWeek * 15;
     $secondsInYear = $secondsInWeek * 52;
 
