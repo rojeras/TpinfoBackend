@@ -98,10 +98,9 @@ val versionInfo = """
 "createDate" : "$dateTime",
 "branch" : "$gitBranch",
 "hash" : "$gitHash"
-}
-""".trimIndent()
+}""".trimIndent()
 
-File("versionInfo.json").writeText(versionInfo)
+File("src/versionInfo.json").writeText(versionInfo)
 // -------------------------------------------------------------------------------------------
 // If the image is to be pushed (QA/Production) then we should always do a "git clean"
 
