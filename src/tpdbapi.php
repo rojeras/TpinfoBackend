@@ -20,6 +20,7 @@
 
 error_reporting(E_ALL);
 ini_set('memory_limit', '256M');
+date_default_timezone_set('Europe/Stockholm');
 
 $VERSION = '6.2';
 $DEPLOYDATE = '2019-01-27';
@@ -31,6 +32,7 @@ $serverName = $_SERVER['SERVER_NAME'];
 
 header('Access-Control-Allow-Origin: *');
 header("Content-type:application/json");
+
 $scriptName = basename(__FILE__, 'tpdbapi.php');
 
 if (isset($_SERVER['QUERY_STRING'])) {
