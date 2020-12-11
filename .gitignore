@@ -5,3 +5,5 @@ src/.DS_Store
 /src/cache/
 
 src/versionInfo.json
+
+bin/backend-envir.lst

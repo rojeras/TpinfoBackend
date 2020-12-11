@@ -145,7 +145,7 @@ if (Largument.isSet("push")) {
 }
 
 if (Largument.isSet("run")) {
-    lExec("docker run -d -p 7777:80 $localImageTag")
+    lExec("src/docker-run-backend.sh $localImageTag")
     println("The image is running and listen to port 7777")
 }
 
