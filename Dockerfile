@@ -2,7 +2,7 @@ FROM php:7.2-apache
 #Added this comment to trigger autobuild of image on docker hub.
 # LEO added comment to verify git functionality - can be removed
 LABEL maintainer="SLL-IT suupport@sll.se"
-
+LABEL layer="backend"
 #ENV VIRTUAL_HOST=tpinfo.se
 
 ## The following environment variables must be set to run this container. Included here just for documentation purpose.
