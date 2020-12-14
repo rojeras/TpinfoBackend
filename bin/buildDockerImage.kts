@@ -139,6 +139,8 @@ check(file.delete() && tempFile.renameTo(file)) { "failed to replace file" }
  */
 // ------------------------------------------------------------------------------
 
+lExec("rm src/cache/*")
+
 lExec("docker build --rm -t $localImageTag .", quiet = false)
 
 if (Largument.isSet("push")) {

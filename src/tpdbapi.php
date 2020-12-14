@@ -59,10 +59,15 @@ function callCache($resource, $queryString) {
         exit();
     }
 
+    if ($resource == 'version') {
+        return file_get_contents('versionInfo.json');
+    }
+
     $filename = md5($queryString) . '.' . $resource . '.cache';
     $filepath = $cache_path . $filename;
 
-    if (!file_exists($filepath) || (time() - 84600 > filemtime($filepath))) {
+   // if (!file_exists($filepath) || (time() - 84600 > filemtime($filepath))) {
+    if (!file_exists($filepath)) {
         parse_str($queryString, $queryArr);
         $data = callDb($resource, $queryArr);
         // Only create/update the file if the call succeeded
@@ -147,10 +152,6 @@ function callDb($resource, $queryArr)
         case "currentItems":
             $answerArr = getCurrentItemsArray($queryArr);
             $answer = json_encode($answerArr);
-            break;
-
-        case "version":
-            $answer = 'Version unknown';
             break;
 
         case "ping":

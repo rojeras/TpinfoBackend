@@ -14,7 +14,7 @@ services:
       - backend
   backend:
     network_mode: bridge
-    image: docker-registry.centrera.se:443/sll-tpinfo/backend:latest-qa
+    image: docker-registry.centrera.se:443/sll-tpinfo/tpinfo-backend:6.5.0
     ports:
       - "8081:80"
     env_file:
