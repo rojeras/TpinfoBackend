@@ -22,6 +22,6 @@ export DBSERVER=localhost
 export DBSERVER=host.docker.internal 
 
 docker container stop $(docker container ls -q --filter "label=layer=backend")
-docker run --net="host" --env-file=bin/backend-envir.lst -d -e DBSERVER -e DBUSER -e DBPWD -e DBNAME -p $port:80 $image
+docker run --env-file=bin/backend-envir.lst -d -e DBSERVER -e DBUSER -e DBPWD -e DBNAME -p $port:80 $image
 
 
