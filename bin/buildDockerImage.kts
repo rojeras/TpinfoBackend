@@ -53,6 +53,8 @@ Largument.parse(args)
 
 if (Largument.isSet("help") || (! (Largument.isSet("run") || (Largument.isSet("push"))))) Largument.showUsageAndExit("One of '--run' or '--push' must be specified!")
 
+val PORT = 7777
+
 // -------------------------------------------------------------------------------------------
 
 // Verify that the current branch is committed
@@ -145,8 +147,8 @@ if (Largument.isSet("push")) {
 }
 
 if (Largument.isSet("run")) {
-    lExec("bin/docker-run-backend.sh $localImageTag")
-    println("The image is running and listen to port 7777")
+    lExec("bin/docker-run-backend.sh $localImageTag $PORT")
+    println("The image is running and listen to port $PORT")
 }
 
 exitProcess(0)

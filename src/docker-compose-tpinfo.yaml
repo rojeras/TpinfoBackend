@@ -1,0 +1,29 @@
+version: '2'
+#this file requires logged in to docker-registry.centrera.se!
+#Can be started with following command: docker-compose --verbose -p [projectname] up -d --build
+#Can be stopped with:  docker-compose --verbose -p [sameprojectnameasstartedwith] down --rmi local
+#Stop command will remove all untagged local images.
+
+services:
+  frontend7:
+    network_mode: bridge
+    image: docker-registry.centrera.se:443/sll-tpinfo/tpinfo-kvfrontend:7.0.27
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
+  backend:
+    network_mode: bridge
+    image: docker-registry.centrera.se:443/sll-tpinfo/backend:latest-qa
+    ports:
+      - "8081:80"
+    env_file:
+      - ./backend-envir.lst
+    volumes:
+      - /opt/data/tpinfo/cache:/var/www/html/tpdb/cache
+      - /opt/data/statistik/inbox:/opt/data/statistik/inbox
+      - backend_synonyms:/opt/data/synonyms
+      - backend_history:/var/www/html/tpdb/history/
+volumes:
+  backend_history:
+  backend_synonyms:
