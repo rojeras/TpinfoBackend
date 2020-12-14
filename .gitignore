@@ -1,0 +1,9 @@
+
+src/.DS_Store
+
+.idea/
+/src/cache/
+
+src/versionInfo.json
+
+bin/backend-envir.lst

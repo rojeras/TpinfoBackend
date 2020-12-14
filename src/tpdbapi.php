@@ -15,11 +15,12 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-//error_reporting(E_ALL ^ E_WARNING);
-//error_reporting(E_ALL ^ E_NOTICE);
-// A small edit to trigger rebuild again
+
+// todo: Ensure all integration calls are done with dates specified - otherwise do not cache
+
 error_reporting(E_ALL);
 ini_set('memory_limit', '256M');
+date_default_timezone_set('Europe/Stockholm');
 
 $VERSION = '6.2';
 $DEPLOYDATE = '2019-01-27';
@@ -29,9 +30,9 @@ require_once 'leolib.php';
 
 $serverName = $_SERVER['SERVER_NAME'];
 
-$DBCONN = sqlConnectEnvs();
-
 header('Access-Control-Allow-Origin: *');
+header("Content-type:application/json");
+
 $scriptName = basename(__FILE__, 'tpdbapi.php');
 
 if (isset($_SERVER['QUERY_STRING'])) {
@@ -45,104 +46,123 @@ $TYPE = substr(strrchr($requestURI, '/'), 1);
 $TYPE = str_replace('?' . $queryString, "", $TYPE);
 define('TYPE', $TYPE);
 
-// Parse the input params
-parse_str($queryString, $queryArr);
+echo callCache($TYPE, $queryString);
 
-// Definitions of the API
-switch ($TYPE) {
-    case "plattforms":
-        $resultArr = getConnectionPointArray();
-        echo json_encode($resultArr);
-        break;
+exit;
+// End of main program
+// ===============================================================================================
+function callCache($resource, $queryString) {
+    $cache_path = 'cache/';
 
-    case "dates":
-        $resultArr = getDateArray();
+    if ($resource == 'reset') {
+        array_map('unlink', glob($cache_path . "*.cache"));
+        exit();
+    }
 
-        $answer = array(
-            "dates" => $resultArr,
-        );
-        echo json_encode($answer);
-        break;
+    if ($resource == 'version') {
+        return file_get_contents('versionInfo.json');
+    }
 
-    case "components":
-        $resultArr = getComponentArray();
-        echo json_encode($resultArr);
-        break;
+    $filename = md5($queryString) . '.' . $resource . '.cache';
+    $filepath = $cache_path . $filename;
 
-    case "contracts":
-        $resultArr = getServiceContractArray();
-        echo json_encode($resultArr);
-        break;
-    case "domains":
-        $resultArr = getServiceDomainArray();
-        echo json_encode($resultArr);
-        break;
-
-    case "logicalAddress":
-        $resultArr = getLogicalAddressArray();
-        echo json_encode($resultArr);
-        break;
-
-    case "plattformChains":
-        $resultArr = getPlattformChainArray();
-        echo json_encode($resultArr);
-        break;
-
-    case "counters":
-        $resultArr = getMaxCountersArray('2018-05-27', '2018-05-29');
-        echo json_encode($resultArr);
-        break;
-
-    // Returns information about which plattforms have statistics data
-    case "statPlattforms":
-        $answerArr = getStatPlattformArray();
-        echo json_encode($answerArr);
-        break;
-
-    case "integrations":
-        $answerArr = getIntegrationArray($queryArr);
-        echo json_encode($answerArr);
-        break;
-
-    case "statistics":
-        $answerArr = getStatisticsArray($queryArr);
-        echo json_encode($answerArr);
-        break;
-
-    case "history":
-        $answerArr = getHistoryArrayV2($queryArr);
-        echo json_encode($answerArr);
-        break;
-
-    case "currentItems":
-        $answerArr = getCurrentItemsArray($queryArr);
-        echo json_encode($answerArr);
-        break;
-
-    case "version":
-        echo '[{"version": "' . $VERSION . '" , "deployDate" : "' . $DEPLOYDATE . '"}]';
-        break;
-
-    /*
-case "version":
-    $resultArr = getVersion();
-    echo json_encode($resultArr);
-    break;
-*/
-    case "ping":
-        echo "PING ANSWER...";
-        break;
-    default:
-        die($scriptName . ": *** ERROR - unknown item: " . $TYPE);
+   // if (!file_exists($filepath) || (time() - 84600 > filemtime($filepath))) {
+    if (!file_exists($filepath)) {
+        parse_str($queryString, $queryArr);
+        $data = callDb($resource, $queryArr);
+        // Only create/update the file if the call succeeded
+        if ($data) {
+            file_put_contents($filepath, $data);
+        }
+    }
+    return file_get_contents($filepath);
 }
 
-//outputJsonFromDB($result);
+// Definitions of the API
+function callDb($resource, $queryArr)
+{
+    GLOBAL $DBCONN;
+    $DBCONN = sqlConnectEnvs();
 
-$DBCONN->close();
+    switch ($resource) {
+        case "plattforms":
+            $resultArr = getConnectionPointArray();
+            $answer = json_encode($resultArr);
+            break;
 
-return;
+        case "dates":
+            $resultArr = getDateArray();
 
-// End of main program
+            $arr = array(
+                "dates" => $resultArr,
+            );
+            $answer = json_encode($arr);
+            break;
+
+        case "components":
+            $resultArr = getComponentArray();
+            $answer = json_encode($resultArr);
+            break;
+
+        case "contracts":
+            $resultArr = getServiceContractArray();
+            $answer = json_encode($resultArr);
+            break;
+        case "domains":
+            $resultArr = getServiceDomainArray();
+            $answer = json_encode($resultArr);
+            break;
+
+        case "logicalAddress":
+            $resultArr = getLogicalAddressArray();
+            $answer = json_encode($resultArr);
+            break;
+
+        case "plattformChains":
+            $resultArr = getPlattformChainArray();
+            $answer = json_encode($resultArr);
+            break;
+
+        case "counters":
+            $resultArr = getMaxCountersArray('2018-05-27', '2018-05-29');
+            $answer = json_encode($resultArr);
+            break;
+
+        // Returns information about which plattforms have statistics data
+        case "statPlattforms":
+            $answerArr = getStatPlattformArray();
+            $answer = json_encode($answerArr);
+            break;
+
+        case "integrations":
+            $answerArr = getIntegrationArray($queryArr);
+            $answer = json_encode($answerArr);
+            break;
+
+        case "statistics":
+            $answerArr = getStatisticsArray($queryArr);
+            $answer = json_encode($answerArr);
+            break;
+
+        case "history":
+            $answerArr = getHistoryArrayV2($queryArr);
+            $answer = json_encode($answerArr);
+            break;
+
+        case "currentItems":
+            $answerArr = getCurrentItemsArray($queryArr);
+            $answer = json_encode($answerArr);
+            break;
+
+        case "ping":
+            $answer = "PING ANSWER...";
+            break;
+        default:
+            die("tpdbapi: *** ERROR - unknown item: " . $resource);
+    }
+    $DBCONN->close();
+    return $answer;
+}
 
 function getConnectionPointArray()
 {
