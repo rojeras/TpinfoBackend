@@ -1,4 +1,4 @@
-DBSERVER=localhost
+DBSERVER=host.docker.internal
 DBUSER=leo
 DBPWD=thInk91x
 DBNAME=TPDB
