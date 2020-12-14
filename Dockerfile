@@ -18,7 +18,15 @@ RUN docker-php-ext-install mysqli
 
 EXPOSE 80 443
 
-COPY src/* /var/www/html/tpdb/
+COPY src/leolib.php /var/www/html/tpdb/
+COPY src/leolib_sql.php /var/www/html/tpdb/
+COPY src/LICENSE /var/www/html/tpdb/
+COPY src/loadsynonyms.php /var/www/html/tpdb/
+COPY src/mkstathistory.php /var/www/html/tpdb/
+COPY src/README.md /var/www/html/tpdb/
+COPY src/tpdbapi.php /var/www/html/tpdb/
+COPY src/tpdbupdate.php /var/www/html/tpdb/
+COPY src/versionInfo.json /var/www/html/tpdb/
 #RUN mkdir -p /var/www/html/tpdb/history
 RUN mkdir -p /var/www/html/tpdb/history && chown www-data:www-data /var/www/html/tpdb/history
 
