@@ -1,0 +1,29 @@
+version: '2'
+#This file requires logged in to docker hub as rojeras!
+#It is intended to run tpinfo on a local machine.
+#Can be started with following command: docker-compose --verbose -p [projectname] up -d --build
+#Can be stopped with:  docker-compose --verbose -p [sameprojectnameasstartedwith] down --rmi local -v
+#Stop command will remove all untagged local images.
+
+services:
+  frontend:
+    network_mode: bridge
+    image: rojeras/tpinfo-frontend:latest-qa
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
+  backend:
+    network_mode: bridge
+    image: rojeras/tpinfo-backend:latest-qa
+    ports:
+      - "8081:80"
+    env_file:
+      - ./backend-envir.lst
+    volumes:
+      - ./inbox:/opt/data/statistik/inbox
+      - backend_synonyms:/opt/data/synonyms
+      - backend_history:/var/www/html/tpdb/history/
+volumes:
+  backend_history:
+  backend_synonyms:
