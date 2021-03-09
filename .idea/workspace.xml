@@ -1,16 +1,20 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="8dd4c6c3-bc5e-4d52-a0cb-f20c60e2e326" name="Default" comment="" />
+    <list default="true" id="8dd4c6c3-bc5e-4d52-a0cb-f20c60e2e326" name="Default" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/dataSources.local.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/dataSources.local.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/dataSources/a14bc441-19a2-4b30-9b83-dcbbdb0df686/storage_v2/_src_/schema/TPDB.-mMnAA.meta" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/dataSources/a14bc441-19a2-4b30-9b83-dcbbdb0df686/storage_v2/_src_/schema/TPDB.-mMnAA.zip" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/tpdbupdate.php" beforeDir="false" afterPath="$PROJECT_DIR$/src/tpdbupdate.php" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
   <component name="ComposerSettings">
-    <execution>
-      <executable />
-    </execution>
+    <execution />
   </component>
   <component name="DatabaseView">
     <option name="SHOW_INTERMEDIATE" value="true" />
@@ -62,10 +66,12 @@
   <component name="KonanWorkspace">
     <executables />
   </component>
+  <component name="KotlinMultiplatform">
+    <allAvailableExecutables />
+  </component>
   <component name="ProjectId" id="1SeyeDR7vwIstbJq5CeGJNyyHr9" />
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
-    <option name="showExcludedFiles" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
   <component name="PropertiesComponent">
@@ -86,6 +92,8 @@
     <property name="FileHistory.git4idea.history.GitHistoryProvider_treeWidth1" value="621" />
     <property name="FileHistory.git4idea.history.GitHistoryProvider_treeWidth2" value="622" />
     <property name="FileHistory.git4idea.history.GitHistoryProvider_treeWidth3" value="621" />
+    <property name="RunOnceActivity.OpenProjectViewOnStart" value="true" />
+    <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
     <property name="WebServerToolWindowFactoryState" value="false" />
     <property name="aspect.path.notification.shown" value="true" />
     <property name="com.intellij.database.dataSource.DataSourceTemplate" value="MariaDB" />
@@ -101,7 +109,7 @@
     <property name="project.structure.last.edited" value="Project" />
     <property name="project.structure.proportion" value="0.0" />
     <property name="project.structure.side.proportion" value="0.0" />
-    <property name="settings.editor.selected.configurable" value="preferences.lookFeel" />
+    <property name="settings.editor.selected.configurable" value="preferences.pluginManager" />
   </component>
   <component name="RunManager">
     <configuration default="true" type="Applet">
@@ -112,6 +120,17 @@
     </configuration>
     <configuration default="true" type="Application" factoryName="Application">
       <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration default="true" type="ArquillianJUnit" factoryName="" nameIsGenerated="true">
+      <option name="arquillianRunConfiguration">
+        <value>
+          <option name="containerStateName" value="" />
+        </value>
+      </option>
+      <option name="TEST_OBJECT" value="class" />
       <method v="2">
         <option name="Make" enabled="true" />
       </method>
@@ -184,6 +203,7 @@
       </list>
     </option>
   </component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
   <component name="SvnConfiguration">
     <configuration />
   </component>
@@ -208,11 +228,21 @@
       <workItem from="1585209070459" duration="42000" />
       <workItem from="1585209131623" duration="10704000" />
       <workItem from="1585311378681" duration="3655000" />
+      <workItem from="1612938556203" duration="21000" />
+      <workItem from="1613558998460" duration="931000" />
+      <workItem from="1614008082732" duration="608000" />
+      <workItem from="1614078486919" duration="1233000" />
+      <workItem from="1614584181654" duration="1273000" />
+      <workItem from="1615270134916" duration="2925000" />
+      <workItem from="1615274001412" duration="631000" />
     </task>
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
-    <option name="version" value="1" />
+    <option name="version" value="3" />
+  </component>
+  <component name="UnknownFeatures">
+    <option featureType="com.intellij.fileTypeFactory" implementationName="*.md" />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
     <option name="TAB_STATES">
@@ -231,50 +261,16 @@
                   </entry>
                 </map>
               </option>
-              <option name="COLUMN_ORDER" />
             </State>
           </value>
         </entry>
       </map>
     </option>
+    <option name="oldMeFiltersMigrated" value="true" />
   </component>
-  <component name="WindowStateProjectService">
-    <state x="304" y="187" key="#com.intellij.execution.impl.EditConfigurationsDialog" timestamp="1585220587399">
-      <screen x="0" y="0" width="1680" height="1050" />
-    </state>
-    <state x="304" y="187" key="#com.intellij.execution.impl.EditConfigurationsDialog/-177.-1152.2048.1152/0.0.1680.1050@0.0.1680.1050" timestamp="1585220587399" />
-    <state x="528" y="260" key="#com.intellij.openapi.updateSettings.impl.PluginUpdateInfoDialog" timestamp="1585209081785">
-      <screen x="0" y="0" width="1680" height="1050" />
-    </state>
-    <state x="528" y="260" key="#com.intellij.openapi.updateSettings.impl.PluginUpdateInfoDialog/-177.-1152.2048.1152/0.0.1680.1050@0.0.1680.1050" timestamp="1585209081785" />
-    <state width="1126" height="133" key="GridCell.Tab.0.bottom" timestamp="1585574106556">
-      <screen x="0" y="0" width="1680" height="1050" />
-    </state>
-    <state width="1126" height="133" key="GridCell.Tab.0.bottom/-177.-1129.2048.1129/0.23.1680.1027@0.23.1680.1027" timestamp="1585311384635" />
-    <state width="1126" height="133" key="GridCell.Tab.0.bottom/-177.-1152.2048.1152/0.0.1680.1050@0.0.1680.1050" timestamp="1585574106556" />
-    <state width="1126" height="133" key="GridCell.Tab.0.center" timestamp="1585574106554">
-      <screen x="0" y="0" width="1680" height="1050" />
-    </state>
-    <state width="1126" height="133" key="GridCell.Tab.0.center/-177.-1129.2048.1129/0.23.1680.1027@0.23.1680.1027" timestamp="1585311384633" />
-    <state width="1126" height="133" key="GridCell.Tab.0.center/-177.-1152.2048.1152/0.0.1680.1050@0.0.1680.1050" timestamp="1585574106554" />
-    <state width="1126" height="133" key="GridCell.Tab.0.left" timestamp="1585574106554">
-      <screen x="0" y="0" width="1680" height="1050" />
-    </state>
-    <state width="1126" height="133" key="GridCell.Tab.0.left/-177.-1129.2048.1129/0.23.1680.1027@0.23.1680.1027" timestamp="1585311384632" />
-    <state width="1126" height="133" key="GridCell.Tab.0.left/-177.-1152.2048.1152/0.0.1680.1050@0.0.1680.1050" timestamp="1585574106553" />
-    <state width="1126" height="133" key="GridCell.Tab.0.right" timestamp="1585574106555">
-      <screen x="0" y="0" width="1680" height="1050" />
-    </state>
-    <state width="1126" height="133" key="GridCell.Tab.0.right/-177.-1129.2048.1129/0.23.1680.1027@0.23.1680.1027" timestamp="1585311384634" />
-    <state width="1126" height="133" key="GridCell.Tab.0.right/-177.-1152.2048.1152/0.0.1680.1050@0.0.1680.1050" timestamp="1585574106555" />
-    <state x="703" y="427" width="350" height="220" key="com.intellij.database.actions.DdlActions$DeleteProvider2$1" timestamp="1585215044456">
-      <screen x="0" y="0" width="1680" height="1050" />
-    </state>
-    <state x="703" y="427" width="350" height="220" key="com.intellij.database.actions.DdlActions$DeleteProvider2$1/-177.-1152.2048.1152/0.0.1680.1050@0.0.1680.1050" timestamp="1585215044456" />
-    <state x="569" y="285" key="com.intellij.database.view.ui.AbstractDbRefactoringDialog" timestamp="1585216492242">
-      <screen x="0" y="0" width="1680" height="1050" />
-    </state>
-    <state x="569" y="285" key="com.intellij.database.view.ui.AbstractDbRefactoringDialog/-177.-1152.2048.1152/0.0.1680.1050@0.0.1680.1050" timestamp="1585216492242" />
+  <component name="XSLT-Support.FileAssociations.UIState">
+    <expand />
+    <select />
   </component>
   <component name="masterDetails">
     <states>

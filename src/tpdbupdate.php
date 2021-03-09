@@ -71,6 +71,10 @@ function loadTakData()
     global $DBCONN;
 
     $apiConnectionPointsJSON = getConnectionPoints();
+    echo $apiConnectionPointsJSON;
+    echo array_reverse($apiConnectionPointsJSON);
+    exit(1);
+
     for ($i = 0; $i < count($apiConnectionPointsJSON); $i++) {
 
         $item = $apiConnectionPointsJSON[$i];
