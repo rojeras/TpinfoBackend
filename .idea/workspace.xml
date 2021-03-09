@@ -2,11 +2,8 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="8dd4c6c3-bc5e-4d52-a0cb-f20c60e2e326" name="Default" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/dataSources.local.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/dataSources.local.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/dataSources/a14bc441-19a2-4b30-9b83-dcbbdb0df686/storage_v2/_src_/schema/TPDB.-mMnAA.meta" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/dataSources/a14bc441-19a2-4b30-9b83-dcbbdb0df686/storage_v2/_src_/schema/TPDB.-mMnAA.zip" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/tpdbupdate.php" beforeDir="false" afterPath="$PROJECT_DIR$/src/tpdbupdate.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/bin/local-run-backend.sh" beforeDir="false" afterPath="$PROJECT_DIR$/bin/local-run-backend.sh" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -234,7 +231,7 @@
       <workItem from="1614078486919" duration="1233000" />
       <workItem from="1614584181654" duration="1273000" />
       <workItem from="1615270134916" duration="2925000" />
-      <workItem from="1615274001412" duration="631000" />
+      <workItem from="1615274001412" duration="2396000" />
     </task>
     <servers />
   </component>
