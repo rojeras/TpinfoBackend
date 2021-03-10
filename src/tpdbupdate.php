@@ -35,7 +35,7 @@ $TAKAPI_URL = 'http://api.ntjp.se/coop/api/v1/';
 
 $STATFILESPATH = leoGetenv('STATFILESPATH');
 
-echo "STATAPIROOT: " . $STATFILESPATH . "\n";
+// echo "STATAPIROOT: " . $STATFILESPATH . "\n";
 
 $SYNONYMFILE = 'MetaSynonym.csv';
 define('SYNONYMFILE', $SYNONYMFILE);
@@ -49,11 +49,11 @@ echo "Start! \n";
 // upgrade_62_to_64();
 
 echo("Load TAK data\n");
-// emptyDatabase("ALL"); !!!
+// emptyDatabase("ALL");
 loadTakData();
 
 // emptyDatabase("StatData");
-loadStatistics($STATFILESPATH);  //!!!!
+loadStatistics($STATFILESPATH);
 
 $DBCONN->close();
 
@@ -84,31 +84,12 @@ function loadTakData()
         $environment = $item['environment'];
         $timeStamp = substr($item['snapshotTime'], 0, 10);
 
-        //echo "Found: " . $plattform . " " . $environment . " : " . $timeStamp . "\n";
-
-        /*
-        if ($timeStamp > '2018-02-06') { // !!!!
-            continue;
-        }
-        */
-
         $lastSnapshotTimeInDb = getLastSnapshotTimeInDb($plattform, $environment);
 
         // if ($timeStamp <= $lastSnapshotTimeInDb) { // +++++
         if ($timeStamp < $lastSnapshotTimeInDb) { // Do re-run with todays data, but not with older. Make it possible to have multiple daily runs.
             continue;
         }
-
-        // For test purposes
-        /*
-        if ($plattform == "NTJP"
-            AND $environment == "PROD"
-            //OR $timeStamp < '2016-12-30'
-            //OR $timeStamp > '2017-01-10'
-        ) {
-            continue;
-        }
-        */
 
         // Exclude first days of 2017 due to an error in the naming of the files
         if ('2017-01-01' <= $timeStamp and $timeStamp <= '2017-01-08') {
@@ -236,7 +217,7 @@ function cleanCache()
 {
     $cache_path = 'cache/';
 
-    // Delete the base item files - must be updated each day
+    // Delete the base item files - must be updated after each reload
     array_map('unlink', glob($cache_path . "*.statPlattforms.cache"));
     array_map('unlink', glob($cache_path . "*.plattforms.cache"));
     array_map('unlink', glob($cache_path . "*.plattformChains.cache"));
@@ -248,7 +229,16 @@ function cleanCache()
 
     // An update will change the TPDB data for today.
     // For every update we should therefore remove all cache files created today (since 00:00)
+    echo "Show files in cache created today which will be removed \n";
 
+    $today = Date('Ymd');
+    foreach (glob($cache_path . "*.cache") as $file) {
+        $fileDate = Date('Ymd', filemTime($file));
+        if ($fileDate == $today) {
+            echo "Cache file will be deleted; " . $file . ", createDate: " . $fileDate . "\n";
+            unlink($file);
+        }
+    }
 
     $secondsInWeek = 604800;
     $secondsIn15Weeks = $secondsInWeek * 15;
@@ -258,13 +248,14 @@ function cleanCache()
     cleanCacheBasedOnFileType($cache_path, "integrations", $secondsInWeek);
 
     // statistics files are quite small and kept 15 weeks
-    cleanCacheBasedOnFileType($cache_path,"statistics", $secondsIn15Weeks);
+    cleanCacheBasedOnFileType($cache_path, "statistics", $secondsIn15Weeks);
 
     // history files are very small and kept a year
     cleanCacheBasedOnFileType($cache_path, "history", $secondsInYear);
 }
 
-function cleanCacheBasedOnFileType($cache_path, $fileType, $acceptedAge) {
+function cleanCacheBasedOnFileType($cache_path, $fileType, $acceptedAge)
+{
 
     foreach (glob($cache_path . "*." . $fileType . ".cache") as $file) {
         $fileAge = time() - filemTime($file);
