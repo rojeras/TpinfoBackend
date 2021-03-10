@@ -71,11 +71,11 @@ function loadTakData()
     global $DBCONN;
 
     $apiConnectionPointsJSON = getConnectionPoints();
-    echo $apiConnectionPointsJSON;
-    echo array_reverse($apiConnectionPointsJSON);
-    exit(1);
 
-    for ($i = 0; $i < count($apiConnectionPointsJSON); $i++) {
+    // Order reversed to get the correct precedence of descriptions. See Issue#2.
+    // LEO 2021-03-09
+    // for ($i = 0; $i < count($apiConnectionPointsJSON); $i++) {
+    for ($i = count($apiConnectionPointsJSON) - 1; $i >= 0; $i--) {
 
         $item = $apiConnectionPointsJSON[$i];
         $connectionPoint = $item['id'];
@@ -245,6 +245,10 @@ function cleanCache()
     array_map('unlink', glob($cache_path . "*.dates.cache"));
     array_map('unlink', glob($cache_path . "*.contracts.cache"));
     array_map('unlink', glob($cache_path . "*.components.cache"));
+
+    // An update will change the TPDB data for today.
+    // For every update we should therefore remove all cache files created today (since 00:00)
+
 
     $secondsInWeek = 604800;
     $secondsIn15Weeks = $secondsInWeek * 15;
