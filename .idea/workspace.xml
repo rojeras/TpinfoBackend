@@ -3,7 +3,7 @@
   <component name="ChangeListManager">
     <list default="true" id="8dd4c6c3-bc5e-4d52-a0cb-f20c60e2e326" name="Default" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/tpdbupdate.php" beforeDir="false" afterPath="$PROJECT_DIR$/src/tpdbupdate.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/versionInfo.json" beforeDir="false" afterPath="$PROJECT_DIR$/src/versionInfo.json" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -121,17 +121,6 @@
         <option name="Make" enabled="true" />
       </method>
     </configuration>
-    <configuration default="true" type="ArquillianJUnit" factoryName="" nameIsGenerated="true">
-      <option name="arquillianRunConfiguration">
-        <value>
-          <option name="containerStateName" value="" />
-        </value>
-      </option>
-      <option name="TEST_OBJECT" value="class" />
-      <method v="2">
-        <option name="Make" enabled="true" />
-      </method>
-    </configuration>
     <configuration default="true" type="JUnit" factoryName="JUnit">
       <option name="TEST_OBJECT" value="class" />
       <option name="WORKING_DIRECTORY" value="%MODULE_WORKING_DIR%" />
@@ -231,7 +220,8 @@
       <workItem from="1614078486919" duration="1233000" />
       <workItem from="1614584181654" duration="1273000" />
       <workItem from="1615270134916" duration="2925000" />
-      <workItem from="1615274001412" duration="10563000" />
+      <workItem from="1615274001412" duration="11412000" />
+      <workItem from="1615393656519" duration="615000" />
     </task>
     <servers />
   </component>
