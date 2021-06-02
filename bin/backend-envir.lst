@@ -1,6 +1,6 @@
 DBSERVER=localhost
-DBUSER=leo
-DBPWD=thInk91x
+DBUSER=TPDB
+DBPWD=TPDB
 DBNAME=TPDB
 STATFILESPATH=/opt/data/statistik/inbox
 SYNONYMFILE=/opt/data/synonyms/MetaSynonym.csv
