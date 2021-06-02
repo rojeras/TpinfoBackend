@@ -3,5 +3,5 @@ DBUSER=TPDB
 DBPWD=TPDB
 DBNAME=TPDB
 STATFILESPATH=/opt/data/statistik/inbox
-SYNONYMFILE=/opt/data/synonyms/MetaSynonym.csv
-HISTORYFILEPATH=/var/www/html/tpdb/history
+SYNONYMFILE=/tmp/MetaSynonym.csv
+HISTORYFILEPATH=/tmp/history
