@@ -23,7 +23,7 @@ COPY src/leolib_sql.php /var/www/html/tpdb/
 COPY src/LICENSE /var/www/html/tpdb/
 COPY src/loadsynonyms.php /var/www/html/tpdb/
 COPY src/mkstathistory.php /var/www/html/tpdb/
-COPY src/README.md /var/www/html/tpdb/
+COPY README.md /var/www/html/tpdb/
 COPY src/tpdbapi.php /var/www/html/tpdb/
 COPY src/tpdbupdate.php /var/www/html/tpdb/
 COPY src/versionInfo.json /var/www/html/tpdb/
