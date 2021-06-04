@@ -1,6 +1,8 @@
 # Overview
 This repo contains the TPDB-api. It is the backend, server part, of tpinfo (where hippo and SLL Statistik make up the frontend).
 
+Complementary documentation is available at https://sllrtp.atlassian.net/wiki/spaces/TPIN/pages/3850371085/tpinfo+dokumentation 
+
 # Local installation
 Clone this repository. 
 
