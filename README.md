@@ -1,12 +1,13 @@
-# Overview
-This repo contains the TPDB-api. It is the backend, server part, of tpinfo (where hippo and SLL Statistik make up the frontend).
+# tpinfo-backend
+This repo contains the TPDB-api. It is the backend, server part, of tpinfo (where hippo and SLL Statistik make up the frontend).  
 
-Complementary documentation is available at https://sllrtp.atlassian.net/wiki/spaces/TPIN/pages/3850371085/tpinfo+dokumentation 
+Code, database and API documentation is available (in Swedish) at the  [tpinfo Confluence site](https://sllrtp.atlassian.net/wiki/spaces/TPIN/pages/3850371085/tpinfo+dokumentation) . Get in touch with [Region Stockholm RTP-förvaltning](mailto:informationsinfrastruktur.hsf@sll.se) to request access.  
 
-# Local installation
-Clone this repository. 
+(The frontend reside in its own repository, see https://github.com/rojeras/tpinfo-frontend)
 
-## Prerequisites
+## Development 
+### Setup
+#### Overview
 To be able to run the application the following must be fulfilled:
 * A unix system; Linux or MacOS 
 * Database engine; MariaDB (preferred) or MySQL
@@ -16,11 +17,16 @@ To be able to run the application the following must be fulfilled:
 
 It should be quite easy to port the startup scripts to make it possible to run tpinfo-backend in Windows, but the need has (thankfully) not yet materialized. 
 
-## Installation of the database
-To use the application the database need to exist. The simples way to install it is to obtain an sqldump of the production- or QA-database of tpinfo. 
+#### Source code 
+tpinfo has been developed with [IntelliJ Ultimate](https://www.jetbrains.com/idea/) (it is an amazing development environment). In addition to an IDE you need to install up-to-date versions of [git](https://git-scm.com/).
+
+Then, to get started, clone this repo and open it as a project in a modern IDE (preferably IntelliJ). 
+
+#### Installation of the database
+To use the application the database need to exist. The simplest way to install it is to obtain a sqldump of the production- or QA-database of tpinfo. 
 
 Then do the following:
-1. Create the SQL user "TPDB". The follwing steps should be performed by that user.
+1. Create the SQL user "TPDB". 
 1. The TPDB user should create a database with name "TPDB"
 1. The TPDB user should load (source) the database dump. It might end in some error message which can be disregarded.
 1. Verify that the tables are created and filled with data.
@@ -31,24 +37,25 @@ There are three views that must be defined in the database. Sometimes they are n
 * ViewIntegrationMulti
 
 Do the following:
-1. Delete the three views if they exist
+1. Delete the three views if they exist in the database.
 1. The sql statements to define the views are located in the *build* folder, one SQL script for each view. Run (source) them to the TPDB database in the order they are listed above. 
 
-# Run tpdb-backend locally
+### Run tpdb-backend locally
 
 The built in PHP web server is a simple way to run the application locally. There are two files that need to be modified to be able to start it.
 
-### bin/backend-envir.list
+#### bin/backend-envir.list
 
 The first four environment variables need to be set to be able to start the api server
+```
 * DBSERVER = localhost
 * DBUSER = TPDB
 * DBPWD = *the password you gave the TPDB user*
 * DBNAME = TPDB
+```
+#### bin/local-run-backend.sh
 
-### bin/local-run-backend.sh
-
-This script should work on any unix system, but please verify it anyway. 
+This script "should" work on any unix system. 
 Observe that the startup script creates a *cache* folder in the *source* folder. Caching is activated, and cache data will be stored in files in the *cache* directory. They should **not** be added to the repo, and ensure to delete it if you are testing changes to the api source code. 
 
 After *local-run-backend.sh* has been successfully started the API can be called.
@@ -61,7 +68,7 @@ Examples:
 * http://localhost:5555/tpdb/tpdbapi.php/api/v1/contracts
 * http://localhost:5555/tpdb/tpdbapi.php/api/v1/logicalAddress
 
-# Updating the database
+## Updating the database
 There are a number of PHP-scripts which are used to both update and extract information from the database. 
 
 ### tpdbupdate.php
@@ -75,7 +82,7 @@ It is used to read synonym definitions from a file and update the MetaSynonym ta
 ### mkstathistory.php
 This script exports statistics information to CSV-files used by some organizations within Region Stockholm. 
 
-## Running the scripts
+### Running the scripts
 The simplest way to run the script is to use PHP web server discussed above. 
 
 It requires additional information in the *backend-envir.lst* file. 
@@ -102,7 +109,7 @@ Verify the files have been created in the *HISTORYFILEPATH* directory.
 
 Check the output from the curl command.
 
-# Build and run docker image
+## Build production image
 A *kscript* (kotlin script), **bin/buildDockerImage.kts**, is used to build the docker image. To use it *kscript* must be installed, it can be found here: https://github.com/holgerbrandl/kscript. And kotlin must be installed. In Linux you can use *sdkman*, in MacOs *homebrew*. 
 
 Before any docker image can be built the active branch must be committed. To be able to push it to the Nogui docker repo, the current commit must also have version number (semantic versioning) in the form of an annotated tag. 
@@ -123,7 +130,6 @@ Usage: script_name [-p] [-r] [-h]
 ```
 
 
-The steps to run the image in the Nogui environment are outside the scope of this guide. There *docker-compose* is used, and a sample docker-compose.yaml is included in the bin directory.
-
+The steps to run the image in the Nogui environment are outside the scope of this guide. *docker-compose* is used, and a sample docker-compose.yaml is included in the bin directory.
 
 
