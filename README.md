@@ -86,15 +86,15 @@ This script exports statistics information to CSV-files used by some organizatio
 The simplest way to run the script is to use PHP web server discussed above. 
 
 It requires additional information in the *backend-envir.lst* file. 
-
-* DBSERVER = localhost
-* DBUSER = TPDB
-* DBPWD = *the password you gave the TPDB user*
-* DBNAME = TPDB
-* STATFILESPATH = *path to directory containing statistics input files* 
-* SYNONYMFILE = *path to synonym input file* 
-* HISTORYFILEPATH = *path to **existing** directory where exported statistics files should be written.* 
-
+```
+DBSERVER = localhost
+DBUSER = TPDB
+DBPWD = *the password you gave the TPDB user*
+DBNAME = TPDB
+STATFILESPATH = *path to directory containing statistics input files* 
+SYNONYMFILE = *path to synonym input file* 
+HISTORYFILEPATH = *path to **existing** directory where exported statistics files should be written.* 
+```
 Then start the **local-run-backend.sh** script. Now the different scripts can be invoked through the *curl* command (or via a web browser)
 
 **curl http://localhost:5555/tpdb/tpdbupdate.php**
