@@ -3,3 +3,5 @@ src/.leolib.php.swp
 .idea/
 /src/cache/
 src/versionInfo.json
+
+*.pyc
