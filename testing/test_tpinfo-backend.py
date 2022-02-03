@@ -10,8 +10,10 @@ import requests
 
 # Edit the following line
 BACKEND_SERVER = "qa.integrationer.tjansteplattform.se"
+# BACKEND_SERVER = "localhost:5555"
 
-BASE_URL = f"https://{BACKEND_SERVER}/tpdb/tpdbapi.php/api/v1"
+
+BASE_URL = f"http://{BACKEND_SERVER}/tpdb/tpdbapi.php/api/v1"
 
 def test_reset_cache():
     # Do not reset the cache of the production or QA systems
@@ -159,5 +161,3 @@ def test_history():
     response_body_history = response_body["history"]
     assert len(response_body_history) == 15
     assert response_body_history["2021-07-05"] == 246240
-
-
