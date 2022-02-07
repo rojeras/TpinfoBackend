@@ -48,6 +48,8 @@ echo "Start! \n";
 // echo("Check if DB updated\n");
 // upgrade_62_to_64();
 
+remove_unused_tables();
+
 echo("Load TAK data\n");
 // emptyDatabase("ALL");
 loadTakData();
@@ -496,11 +498,6 @@ function ensureRouting($plattformId, $timeStamp, $itemList, $lastSnapshotTimeInD
                 echo "\n";
                 break;
         }
-        // And verify/update/insert in Routing and Url tables
-        if ($routingId) {
-            //ensureUrl($routingId, $url, $timeStamp, $lastSnapshotTimeInDb);
-            ensureRivtaProfile($routingId, $rivtaProfile, $timeStamp, $lastSnapshotTimeInDb);
-        }
     }
 }
 
@@ -830,55 +827,6 @@ function ensureUrl($routingId, $url, $timeStamp, $lastSnapshotTimeInDb)
     }
 }
 */
-function ensureRivtaProfile($routingId, $rivtaProfile, $timeStamp, $lastSnapshotTimeInDb)
-{
-    /*
-    $select = "
-        SELECT id
-        FROM TakRivtaProfile
-        WHERE
-          routingId = ?
-          AND rivtaProfile = ?
-          AND dateEnd = ? 
-    ";
-    $result = sqlSelectPrep($select, "iss", array($routingId, $rivtaProfile, $lastSnapshotTimeInDb));
-    $numRows = $result->num_rows;
-
-    if ($numRows >= 1) {
-        // Record exist, update dateEnd
-        $row = $result->fetch_assoc();
-        $rivtaProfileId = $row['id'];
-
-        $update = "
-            UPDATE TakRivtaProfile
-            SET dateEnd = ?
-            WHERE id = ?
-        ";
-        $dummy = sqlUpdatePrep($update, "si", array($timeStamp, $rivtaProfileId));
-
-        */
-
-    $update = "
-            UPDATE TakRivtaProfile
-            SET dateEnd = ?
-            WHERE
-                  routingId = ?
-              AND rivtaProfile = ?
-              AND dateEnd = ?
-        ";
-    $numRows = sqlUpdatePrep($update, "siss", array($timeStamp, $routingId, $rivtaProfile, $lastSnapshotTimeInDb));
-
-    if ($numRows == 0) {
-        // Record does not exist, insert it
-        $insert = "
-        INSERT INTO TakRivtaProfile
-        (routingId, rivtaProfile, dateEffective, dateEnd)
-        VALUES (?, ?, ?, ?)
-        ";
-        $dummy = sqlInsertPrep($insert, "isss", array($routingId, $rivtaProfile, $timeStamp, $timeStamp));
-    }
-}
-
 
 function ensureStatisticsV2($firstPlattformHsaId, $plattform, $consumerHsa, $calls, $averageResponsTime, $namespace, $logicalAddressString, $startDate, $endDate, $updateDateBefore, $updateDateAfter)
 {
@@ -1859,6 +1807,13 @@ function upgrade_62_to_64()
     $dummy = sqlStmt($delete, "", array());
 
     return;
+}
+
+function remove_unused_tables()
+{
+    sqlDropTableIfExistsPrep("StatData");
+    sqlDropTableIfExistsPrep("MetaVersion");
+    sqlDropTableIfExistsPrep("TakRivtaProfile");
 }
 
 ?>

@@ -651,21 +651,6 @@ function getIntegrationArray($queryArr)
 
 function getStatPlattformArray()
 {
-    /*
-    $select = "
-    SELECT DISTINCT
-      ti . lastPlattformId,
-      tp . name,
-      tp . environment
-    FROM
-      TakIntegration ti,
-      TakPlattform tp,
-      StatData sd
-    WHERE
-          sd . integrationId = ti . id
-          AND ti . lastPlattformId = tp . id
-    ";
-    */
     $select = "
     SELECT DISTINCT
       sdt.plattformId AS PlattformId,
@@ -882,25 +867,7 @@ function getStatistics($dateEffective,
 {
 
 // todo: Will need to change calc of average. Need to sum respons time over all calls and then divide with sum of num calls
-    $selectStat1 = "
-      SELECT
-        integrationId, 
-        SUM(calls) AS numberOfCalls,
-        AVG(averageResponseTime) DIV 1 AS averageResponseTime
-      FROM
-        StatData
-      WHERE
-            day >= ?
-        AND day <= ?
-        AND integrationId IN(
-    ";
-
-    $selectStat2 = "
-)
-      GROUP BY integrationId
-      ";
-
-    $selectStat = $selectStat1 . $selectIntegrations1 . $selectIntegrations3 . $whereClauseIntegrations . $selectStat2;
+    $selectStat = $selectIntegrations1 . $selectIntegrations3 . $whereClauseIntegrations;
 
     $result = sqlSelectPrep(
         $selectStat,
@@ -956,31 +923,6 @@ function getUpdatedDatesList($today, $whereClauseIntegrationsWithoutDates, $type
     return $updateDates;
 }
 
-
-function getVersion()
-{
-
-    $select = "
-         SELECT  
-          version, 
-          deployDate
-         FROM MetaVersion
-         ";
-
-    $result = sqlSelectPrep($select, "", array());
-
-    $resultArr = array();
-    while ($row = $result->fetch_assoc()) {
-        $recordArr = array(
-            "version" => $row['version'],
-            "deployDate" => $row['deployDate']
-        );
-        $resultArr[] = $recordArr;
-    }
-
-    return $resultArr;
-}
-
 // The history array it used to show the "Visa utveckling över tid" in statistics
 function getHistoryArray($queryArr)
 {
@@ -995,27 +937,7 @@ function getHistoryArray($queryArr)
         $dummy2,
         $dummy3) = mkWhereClauseFromParams($queryArr);
 
-    $selectStat1 = "
-        SELECT
-          day,
-          SUM(calls) AS numberOfCalls,
-          AVG(averageResponseTime) DIV 1 AS averageResponseTime
-        FROM
-          StatData
-        WHERE
-          day >= ?
-          AND day <= ?
-          AND integrationId IN(
-    SELECT id
-              FROM TakIntegration  
-          ";
-
-    $selectStat2 = "
-        )
-      GROUP BY day
-      ";
-
-    $selectStat = $selectStat1 . $whereClauseIntegrations . $selectStat2;
+    $selectStat = $whereClauseIntegrations;
 
     $result = sqlSelectPrep(
         $selectStat,

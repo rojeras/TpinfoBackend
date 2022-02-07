@@ -152,6 +152,15 @@ function sqlDropTablePrep($table)
 
 }
 
+function sqlDropTableIfExistsPrep($table)
+{
+
+    $delete = "DROP TABLE IF EXISTS " . $table;
+
+    sqlStatementWithPrep($delete, "", array());
+
+}
+
 
 function sqlStatementWithPrep($sqlStmt, $paramTypes, $paramArr, $verbose = null)
 {
