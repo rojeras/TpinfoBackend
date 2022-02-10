@@ -130,6 +130,6 @@ Usage: script_name [-p] [-r] [-h]
 ```
 
 
-The steps to run the image in the Nogui environment are outside the scope of this guide. *docker-compose* is used, and a sample docker-compose.yaml is included in the bin directory.
+The steps to run the image in the Nogui environment are outside the scope of this guide. *docker-compose* is used, and a sample docker-compose.yaml is included in the bin directory. See documentation on Confluence.
 
 
