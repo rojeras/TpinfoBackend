@@ -69,7 +69,7 @@ function mkStatHistory($path)
 
 function createHistoryFile($path, $month) {
     $file = $path . "/RTP-PROD_statistik_" . $month . ".csv";
-    if (file_exists($file)) {
+    if (file_exists($file) && $month != date('Y-m')) {
         echo "Skipping existing file: " . $file . "\n";
         return;
     }
