@@ -19,7 +19,7 @@
 // todo: Ensure all integration calls are done with dates specified - otherwise do not cache
 
 error_reporting(E_ALL);
-ini_set('memory_limit', '256M');
+ini_set('memory_limit', '512M');
 date_default_timezone_set('Europe/Stockholm');
 
 $VERSION = '6.2';
