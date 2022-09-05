@@ -1605,7 +1605,7 @@ function extractDomainContractName($namespace)
 
     $nameArrLen = count($nameArr);
     if ($nameArrLen < 6) {
-        echo "*** Name space error, too few commas: " . $namespace . "\n";
+        echo "*** Name space error, too few colon characters: " . $namespace . "\n";
         return array(false, false);
         //return array("Illegal namespace", $namespace);
     }
