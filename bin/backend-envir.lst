@@ -5,3 +5,4 @@ DBNAME=TPDB
 STATFILESPATH=/opt/data/statistik/inbox
 SYNONYMFILE=/tmp/MetaSynonym.csv
 HISTORYFILEPATH=/tmp/history
+TPDBAPI_MEMORY_LIMIT=512M

@@ -17,9 +17,10 @@
  */
 
 // todo: Ensure all integration calls are done with dates specified - otherwise do not cache
+require_once 'leolib.php';
 
 error_reporting(E_ALL);
-ini_set('memory_limit', '512M');
+ini_set('memory_limit', leoGetenv('TPDBAPI_MEMORY_LIMIT'));
 date_default_timezone_set('Europe/Stockholm');
 
 $VERSION = '6.2';
